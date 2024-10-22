@@ -4,6 +4,7 @@ use ggez::graphics::{self, draw, drawable_size, Color, DrawParam};
 use std::fs;
 use ggez::graphics::Image;
 use ggez::event;
+use ggez::input::keyboard::{KeyCode, KeyMods};
 
 struct Arrow {
     position : (f32, f32),
@@ -111,6 +112,23 @@ impl EventHandler <ggez::GameError> for PlayState {
                 ongoing: true,
             };
             self.arrows.push(new_arrow);
+        }
+    }
+
+    fn key_down_event(
+            &mut self,
+            _ctx: &mut Context,
+            keycode: KeyCode,
+            _keymods: KeyMods,
+            _repeat: bool,
+        ) {
+        match keycode {
+            KeyCode::A => {
+                self.hero_character_position.0 -= 20.0;
+                println!("a pressed");
+            },
+            KeyCode::D => self.hero_character_position.0 += 20.0,
+            _ => {}
         }
     }
 }
