@@ -1,10 +1,14 @@
 use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
-use ggez::graphics::{self, drawable_size, Color, DrawParam};
+use ggez::graphics::{self, draw, drawable_size, Color, DrawParam};
 use std::fs;
 use ggez::graphics::Image;
 use ggez::event;
 
+struct Arrow {
+    position : (f32, f32),
+    ongoing : bool,
+}
 pub struct PlayState {
     hero_character: Image,
     hero_character_size: (f32, f32),
@@ -16,7 +20,11 @@ pub struct PlayState {
     ultimate_ability_position: (f32, f32),
     ultimate_ability_cooldown_position: (f32, f32),
     draw_arrow: bool,
+    // arrow_ongoing: bool,
+    // arrow_position: (f32, f32),
+    arrows: Vec<Arrow>,
 }
+
 
 impl PlayState {
     pub fn new(ctx: &mut Context) -> GameResult<PlayState> {
@@ -31,6 +39,13 @@ impl PlayState {
         let ultimate_ability_position= (51.0, 51.0);
         let ultimate_ability_cooldown_position= (61.0, 61.0);
         let draw_arrow = false;
+        // let arrow_ongoing = false;
+        let arrow = Arrow {
+            position : (hero_character_position.0 - 47.0 + hero_character_size.0 / 2.0, hero_character_position.1),
+            ongoing : false
+        };
+        // let arrow_position = (hero_character_position.0 - 2.0 + hero_character_size.0 / 2.0, hero_character_position.1 - 44.0);
+        let arrows = vec![arrow];
 
         Ok(PlayState{
             hero_character,
@@ -43,12 +58,25 @@ impl PlayState {
             ultimate_ability_cooldown_position, 
             ultimate_ability_position,
             draw_arrow,
+            // arrow_position,
+            // arrow_ongoing,
+            arrows,
         })
     }
 }
 
 impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+        for arrow in &mut self.arrows {
+            if arrow.ongoing == true {
+                arrow.position.1 -= 5.5;
+                println!("{}", arrow.position.1);
+                println!("inside the condition");
+                if arrow.position.1 < 0.0 {
+                    arrow.ongoing = false; 
+                }
+            }
+        }
         Ok(())
     }
 
@@ -57,10 +85,13 @@ impl EventHandler <ggez::GameError> for PlayState {
         let hero_dist_rect = graphics::Rect::new(self.hero_character_position.0, self.hero_character_position.1, self.hero_character_size.0, self.hero_character_size.1);
         let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero_character_size.0 / self.hero_character.width() as f32 , self.hero_character_size.1/ self.hero_character.height() as f32]);
         graphics::draw(ctx, &self.hero_character, hero_draw_param)?;
-        if self.draw_arrow == true {
-            let arrow = graphics::Rect::new(self.hero_character_position.0 - 2.0 + self.hero_character_size.0 / 2.0, self.hero_character_position.1 - 44.0, 2.0, 40.0);
+
+        for arrow in &self.arrows {
+            if arrow.ongoing == true {
+                let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero_character_size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 40.0);
                 let arrow_mess = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), arrow, Color::from_rgb(0, 0, 0)).unwrap();
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
+            }
         }
         graphics::present(ctx)?;
         Ok(())
@@ -75,7 +106,11 @@ impl EventHandler <ggez::GameError> for PlayState {
         ) {
         if button == event::MouseButton::Left {
             println!("left button in mouse clicked");
-            self.draw_arrow = true;
+            let new_arrow = Arrow {
+                position: (self.hero_character_position.0 - 47.0 + self.hero_character_size.0 / 2.0, self.hero_character_position.1),
+                ongoing: true,
+            };
+            self.arrows.push(new_arrow);
         }
     }
 }
