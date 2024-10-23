@@ -1,11 +1,13 @@
 use ggez::mint::Vector2;
 use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
-use ggez::graphics::{self, draw, drawable_size, Color, DrawParam};
+use ggez::graphics::{self, drawable_size, Color, DrawParam};
 use std::{fs, vec};
 use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
+
+const default_pos_hero: f32 = 840.0;
 
 struct Arrow {
     position : (f32, f32),
@@ -14,7 +16,8 @@ struct Arrow {
 
 struct Hero {
     size: (f32, f32),
-    position: (f32, f32)
+    position: (f32, f32),
+    velocity: Vector2<f32>,
 }
 
 trait Gravity {
@@ -23,10 +26,10 @@ trait Gravity {
 
 impl Gravity for Hero {
     fn gravity(&mut self) {
-        self.position.1 += 10.0;
+        self.position.1 += 20.0;
         //840.0 position of hero in y
-        if self.position.1 > 840.0 {
-            self.position.1 = 840.0;
+        if self.position.1 > default_pos_hero {
+            self.position.1 = default_pos_hero;
         }
     }
 }
@@ -39,8 +42,6 @@ fn apply_gravity(items: &mut Vec<&mut dyn Gravity>) {
 
 pub struct PlayState {
     hero_character: Image,
-    // hero_character_size: (f32, f32),
-    // hero_character_position: (f32, f32),
     shield_ability_position: (f32, f32),
     shiled_ability_cooldown_position: (f32, f32),
     teleport_ability_position: (f32, f32),
@@ -49,8 +50,6 @@ pub struct PlayState {
     ultimate_ability_cooldown_position: (f32, f32),
     draw_arrow: bool,
     hero: Hero,
-    // arrow_ongoing: bool,
-    // arrow_position: (f32, f32),
     arrows: Vec<Arrow>,
 }
 
@@ -62,9 +61,8 @@ impl PlayState {
         let hero = Hero {
             size: (95.0, 120.0),
             position: (win_width/ 2.0, win_height - 2.0 * 120.0),
+            velocity: Vector2 { x: 0.0, y: 0.0 }
         };
-        // let hero_character_size = (95.0, 120.0);
-        // let hero_character_position = (win_width/ 2.0, win_height - 2.0 * hero_character_size.1);
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
         let teleport_ability_position= (31.0, 31.0);
@@ -72,18 +70,14 @@ impl PlayState {
         let ultimate_ability_position= (51.0, 51.0);
         let ultimate_ability_cooldown_position= (61.0, 61.0);
         let draw_arrow = false;
-        // let arrow_ongoing = false;
         let arrow = Arrow {
             position : (hero.position.0 - 47.0 + hero.size.0 / 2.0, hero.position.1),
             ongoing : false
         };
-        // let arrow_position = (hero_character_position.0 - 2.0 + hero_character_size.0 / 2.0, hero_character_position.1 - 44.0);
         let arrows = vec![arrow];
 
         Ok(PlayState{
             hero_character,
-            // hero_character_size,
-            // hero_character_position,
             shield_ability_position, 
             shiled_ability_cooldown_position, 
             teleport_ability_cooldown_position, 
@@ -91,8 +85,6 @@ impl PlayState {
             ultimate_ability_cooldown_position, 
             ultimate_ability_position,
             draw_arrow,
-            // arrow_position,
-            // arrow_ongoing,
             arrows,
             hero,
         })
@@ -101,6 +93,7 @@ impl PlayState {
 
 impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+        self.hero.velocity = Vector2{x: 0.0, y: 0.0};
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
         for arrow in &mut self.arrows {
@@ -159,23 +152,18 @@ impl EventHandler <ggez::GameError> for PlayState {
         ) {
         match keycode {
             KeyCode:: A => {
-                self.hero.position.0 -= 50.0;
+                self.hero.velocity.x -= 80.0;
+                self.hero.position.0 += self.hero.velocity.x;
             }
             KeyCode :: W => {
-                self.hero.position.1 -= 100.0;
+                self.hero.position.1 -= 200.0;
                 println!("pressed w");
             }
             KeyCode::D => {
-                self.hero.position.0 += 50.0;
+                self.hero.velocity.x += 80.0;
+                self.hero.position.0 += self.hero.velocity.x;
             }
             _ => {}
-            // KeyCode::A => {
-            //     self.hero.position.0 -= 20.0;
-            //     println!("a pressed");
-            // },
-            // KeyCode::D => self.hero.position.0 += 20.0,
-            // KeyCode::W => self.hero.position.1 -= 20.0,
-            // _ => {}
         }
     }
 }
