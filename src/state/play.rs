@@ -2,7 +2,7 @@ use ggez::mint::Vector2;
 use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
 use ggez::graphics::{self, draw, drawable_size, Color, DrawParam};
-use std::fs;
+use std::{fs, vec};
 use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
@@ -31,7 +31,7 @@ impl Gravity for Hero {
     }
 }
 
-fn apply_gravity(items: &mut Vec<Box<dyn Gravity>>) {
+fn apply_gravity(items: &mut Vec<&mut dyn Gravity>) {
     for item in items {
         item.gravity();
     }
@@ -101,7 +101,8 @@ impl PlayState {
 
 impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.hero.gravity();
+        let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
+        apply_gravity(&mut gravity_objects);
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
                 arrow.position.1 -= 5.5;
