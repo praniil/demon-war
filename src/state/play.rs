@@ -1,13 +1,14 @@
-use ggez::mint::Vector2;
+use ggez::mint::{Point2, Vector2};
 use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
-use ggez::graphics::{self, drawable_size, Color, DrawParam};
+use ggez::graphics::{self, drawable_size, Color, DrawParam, Mesh, DrawMode};
+use glam::Vec2;
 use std::{fs, vec};
 use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
 
-const default_pos_hero: f32 = 840.0;
+const DEFAULT_POS_HERO: f32 = 840.0;
 
 struct Arrow {
     position : (f32, f32),
@@ -17,7 +18,6 @@ struct Arrow {
 struct Hero {
     size: (f32, f32),
     position: (f32, f32),
-    velocity: Vector2<f32>,
 }
 
 trait Gravity {
@@ -26,10 +26,10 @@ trait Gravity {
 
 impl Gravity for Hero {
     fn gravity(&mut self) {
-        self.position.1 += 20.0;
+        self.position.1 += 6.0;
         //840.0 position of hero in y
-        if self.position.1 > default_pos_hero {
-            self.position.1 = default_pos_hero;
+        if self.position.1 > DEFAULT_POS_HERO {
+            self.position.1 = DEFAULT_POS_HERO;
         }
     }
 }
@@ -38,6 +38,10 @@ fn apply_gravity(items: &mut Vec<&mut dyn Gravity>) {
     for item in items {
         item.gravity();
     }
+}
+
+fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
+    Point2::from(vec.to_array())
 }
 
 pub struct PlayState {
@@ -51,17 +55,16 @@ pub struct PlayState {
     draw_arrow: bool,
     hero: Hero,
     arrows: Vec<Arrow>,
+    draw_shield: bool,
 }
 
 
 impl PlayState {
     pub fn new(ctx: &mut Context) -> GameResult<PlayState> {
-        let (win_width, win_height) = drawable_size(ctx);
         let hero_character = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/copy_hero.png");
         let hero = Hero {
             size: (95.0, 120.0),
-            position: (win_width/ 2.0, win_height - 2.0 * 120.0),
-            velocity: Vector2 { x: 0.0, y: 0.0 }
+            position: (1920.0 / 2.0, 840.0),
         };
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
@@ -75,6 +78,7 @@ impl PlayState {
             ongoing : false
         };
         let arrows = vec![arrow];
+        let draw_shield = false;
 
         Ok(PlayState{
             hero_character,
@@ -87,18 +91,18 @@ impl PlayState {
             draw_arrow,
             arrows,
             hero,
+            draw_shield,
         })
     }
 }
 
 impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.hero.velocity = Vector2{x: 0.0, y: 0.0};
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
-                arrow.position.1 -= 5.5;
+                arrow.position.1 -= 10.5;
                 println!("{}", arrow.position.1);
                 println!("inside the condition");
                 if arrow.position.1 < 0.0 {
@@ -122,7 +126,17 @@ impl EventHandler <ggez::GameError> for PlayState {
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
+
+        let radius = 80.0;
+
+        if self.draw_shield {
+            let test_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
+            let test_circle = Mesh::new_circle(ctx, graphics::DrawMode::stroke(2.0), test_destn, radius, 1.0, Color::from_rgb(255, 0, 0)).unwrap();
+            graphics::draw(ctx, &test_circle, DrawParam::default()).unwrap();
+            println!("circle should have been drawn");
+        }
         graphics::present(ctx)?;
+        
         Ok(())
     }
 
@@ -152,16 +166,21 @@ impl EventHandler <ggez::GameError> for PlayState {
         ) {
         match keycode {
             KeyCode:: A => {
-                self.hero.velocity.x -= 80.0;
-                self.hero.position.0 += self.hero.velocity.x;
+                self.hero.position.0 -= 180.0;
             }
             KeyCode :: W => {
                 self.hero.position.1 -= 200.0;
+                if self.hero.position.1 < 0.0 {
+                    self.hero.position.1 = 0.0;
+                }
                 println!("pressed w");
             }
             KeyCode::D => {
-                self.hero.velocity.x += 80.0;
-                self.hero.position.0 += self.hero.velocity.x;
+                self.hero.position.0 += 180.0;
+            }
+            KeyCode::Q => {
+                println!("pressed q");
+                self.draw_shield = true;
             }
             _ => {}
         }
