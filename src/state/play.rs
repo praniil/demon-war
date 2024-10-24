@@ -3,6 +3,8 @@ use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
 use ggez::graphics::{self, drawable_size, Color, DrawParam, Mesh, DrawMode};
 use glam::Vec2;
+use core::time;
+use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
 use ggez::event;
@@ -56,6 +58,8 @@ pub struct PlayState {
     hero: Hero,
     arrows: Vec<Arrow>,
     draw_shield: bool,
+    shield_start_time: Option<Instant>,
+    teleport: bool,
 }
 
 
@@ -79,6 +83,8 @@ impl PlayState {
         };
         let arrows = vec![arrow];
         let draw_shield = false;
+        let shield_start_time = None;
+        let teleport = false;
 
         Ok(PlayState{
             hero_character,
@@ -92,6 +98,8 @@ impl PlayState {
             arrows,
             hero,
             draw_shield,
+            teleport,
+            shield_start_time,
         })
     }
 }
@@ -103,11 +111,15 @@ impl EventHandler <ggez::GameError> for PlayState {
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
                 arrow.position.1 -= 10.5;
-                println!("{}", arrow.position.1);
-                println!("inside the condition");
                 if arrow.position.1 < 0.0 {
                     arrow.ongoing = false; 
                 }
+            }
+        }
+        if let Some(start_time) = self.shield_start_time {
+            if start_time.elapsed() > time::Duration::new(5, 0) {
+                self.draw_shield = false;
+                self.shield_start_time = None;
             }
         }
         Ok(())
@@ -122,21 +134,20 @@ impl EventHandler <ggez::GameError> for PlayState {
         for arrow in &self.arrows {
             if arrow.ongoing == true {
                 let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 40.0);
-                let arrow_mess = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), arrow, Color::from_rgb(0, 0, 0)).unwrap();
+                let arrow_mess = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), arrow, Color::from_rgb(0, 102, 204)).unwrap();
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
 
         let radius = 80.0;
 
-        if self.draw_shield {
-            let test_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
-            let test_circle = Mesh::new_circle(ctx, graphics::DrawMode::stroke(2.0), test_destn, radius, 1.0, Color::from_rgb(255, 0, 0)).unwrap();
-            graphics::draw(ctx, &test_circle, DrawParam::default()).unwrap();
-            println!("circle should have been drawn");
+        if self.draw_shield == true {
+            let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
+            let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
+            graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
         }
         graphics::present(ctx)?;
-        
+
         Ok(())
     }
 
@@ -144,8 +155,8 @@ impl EventHandler <ggez::GameError> for PlayState {
             &mut self,
             _ctx: &mut Context,
             button: event::MouseButton,
-            _x: f32,
-            _y: f32,
+            x: f32,
+            y: f32,
         ) {
         if button == event::MouseButton::Left {
             println!("left button in mouse clicked");
@@ -154,6 +165,14 @@ impl EventHandler <ggez::GameError> for PlayState {
                 ongoing: true,
             };
             self.arrows.push(new_arrow);
+        }
+
+        if self.teleport {
+            if button == event::MouseButton::Right {
+                println!("x position of click: {} and y: {}", x, y);
+                self.hero.position = (x, y);
+                self.teleport = false;
+            }
         }
     }
 
@@ -166,7 +185,10 @@ impl EventHandler <ggez::GameError> for PlayState {
         ) {
         match keycode {
             KeyCode:: A => {
-                self.hero.position.0 -= 180.0;
+                self.hero.position.0 -= 80.0;
+                if self.hero.position.0 < 0.0 {
+                    self.hero.position.0 = 0.0;
+                }
             }
             KeyCode :: W => {
                 self.hero.position.1 -= 200.0;
@@ -176,11 +198,22 @@ impl EventHandler <ggez::GameError> for PlayState {
                 println!("pressed w");
             }
             KeyCode::D => {
-                self.hero.position.0 += 180.0;
+                self.hero.position.0 += 80.0;
+                if self.hero.position.0 > 1920.0 - self.hero.size.0 {
+                    self.hero.position.0 = 1920.0 - self.hero.size.0;
+                }
             }
             KeyCode::Q => {
                 println!("pressed q");
                 self.draw_shield = true;
+                self.shield_start_time = Some(Instant::now());
+            }
+            KeyCode::E => {
+                println!("pressed E");
+                self.teleport = true;
+            }
+            KeyCode::F => {
+                println!("ultimate");
             }
             _ => {}
         }
