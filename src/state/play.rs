@@ -10,7 +10,6 @@ use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
 use rand::Rng;
-use std::num;
 
 const DEFAULT_POS_HERO: f32 = 840.0;
 
@@ -22,11 +21,19 @@ struct Arrow {
 struct Hero {
     size: (f32, f32),
     position: (f32, f32),
+    health_point : u32,
 }
+
+// impl std::ops::Drop for Hero{
+//     fn drop(&mut self) {
+//         println!("hero dropped");
+//     }
+// }
 
 struct Bat {
     size: (f32, f32),
     position: (f32, f32),
+    health_point : u32,
 }
 
 impl Bat {
@@ -95,6 +102,9 @@ pub struct PlayState {
     shield_start_time: Option<Instant>,
     teleport: bool,
     hero_switch: bool,
+    hero_arrow_bat_collision: bool,
+    hero_knife_bat_collision: bool,
+    draw_hero: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -111,12 +121,14 @@ impl PlayState {
         let hero = Hero {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
+            health_point: 150,
         };
 
         let bat_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/bat.png");
         let bat = Bat {
             size: (80.0, 80.0),
             position: get_random_position(),
+            health_point: 50,
         };
 
         println!("bat position x: {}, y: {}", bat.position.0, bat.position.1);
@@ -137,6 +149,9 @@ impl PlayState {
         let shield_start_time = None;
         let teleport = false;
         let hero_switch = false;
+        let hero_arrow_bat_collision = false;
+        let hero_knife_bat_collision = false;
+        let draw_hero = true;
 
         Ok(PlayState{
             hero_character_arrows,
@@ -156,6 +171,9 @@ impl PlayState {
             shield_start_time,
             hero_switch,
             bat,
+            hero_knife_bat_collision,
+            hero_arrow_bat_collision,
+            draw_hero,
         })
     }
 }
@@ -165,8 +183,11 @@ impl EventHandler <ggez::GameError> for PlayState {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
         //for hero with arrows
+        
+        if self.draw_hero {
+            (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
+        }
 
-        (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
                 arrow.position.1 -= 10.5;
@@ -181,6 +202,22 @@ impl EventHandler <ggez::GameError> for PlayState {
             if start_time.elapsed() > time::Duration::new(5, 0) {
                 self.draw_shield = false;
                 self.shield_start_time = None;
+            }
+        }
+
+        if self.hero_arrow_bat_collision && self.draw_hero {
+            self.hero.health_point -= 15;
+            self.hero_arrow_bat_collision = false;
+            if self.bat.position.0 > self.hero.position.0 {
+                self.bat.position.0 -= 10.0;
+                self.bat.position.1 -= 10.0;
+            } else {
+                self.bat.position.0 += 10.0;
+                self.bat.position.1 -= 10.0;
+            }
+
+            if self.hero.health_point == 0 {
+                self.draw_hero = false;
             }
         }
 
@@ -203,31 +240,46 @@ impl EventHandler <ggez::GameError> for PlayState {
         graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
 
         //for hero with arrow
-        if self.hero_switch == false {
-            let hero_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
-            let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
-            graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
+        if self.draw_hero { 
+            let hero_arrow_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
+            let hero_knife_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
 
-    
-            let radius = 80.0;
-    
-            if self.draw_shield == true {
-                let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
-                let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
-                graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
+            if self.hero_switch == false {
+                let hero_draw_param  = DrawParam::default().dest([hero_arrow_dist_rect.x, hero_arrow_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
+                graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
+
+
+                let radius = 80.0;
+
+                if self.draw_shield == true {
+                    let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
+                    let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
+                    graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
+                }
+
+                if hero_arrow_dist_rect.overlaps(&bat_character) {
+                    self.hero_arrow_bat_collision = true;
+                }
             }
-        }
-        //for hero with knife
-        else {
-            let hero_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
-            let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
-            graphics::draw(ctx, &self.hero_character_knife, hero_draw_param)?;
+            //for hero with knife
+            else {
+                let hero_draw_param  = DrawParam::default().dest([hero_knife_dist_rect.x, hero_knife_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
+                graphics::draw(ctx, &self.hero_character_knife, hero_draw_param)?;
 
-            //range where knife attack succeds
-            let radius = 120.0;
-            let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 15.0 + (self.hero.size.1 / 2.0)));
-            let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
-            graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
+                //range where knife attack succeds
+                let radius = 120.0;
+                let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 15.0 + (self.hero.size.1 / 2.0)));
+                let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
+                graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
+            }
+
+            if hero_arrow_dist_rect.overlaps(&bat_character) || hero_knife_dist_rect.overlaps(&bat_character) {
+                self.hero_arrow_bat_collision = true;
+            }
+
+            if hero_arrow_dist_rect.overlaps(&bat_character) || hero_knife_dist_rect.overlaps(&bat_character) {
+                self.hero_arrow_bat_collision = true;
+            }
         }
 
         graphics::present(ctx)?;
