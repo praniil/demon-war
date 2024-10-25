@@ -47,7 +47,8 @@ fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
 }
 
 pub struct PlayState {
-    hero_character: Image,
+    hero_character_arrows: Image,
+    hero_character_knife: Image,
     shield_ability_position: (f32, f32),
     shiled_ability_cooldown_position: (f32, f32),
     teleport_ability_position: (f32, f32),
@@ -60,12 +61,14 @@ pub struct PlayState {
     draw_shield: bool,
     shield_start_time: Option<Instant>,
     teleport: bool,
+    hero_switch: bool,
 }
 
 
 impl PlayState {
     pub fn new(ctx: &mut Context) -> GameResult<PlayState> {
-        let hero_character = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/copy_hero.png");
+        let hero_character_arrows = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/copy_hero.png");
+        let hero_character_knife = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/hero_knife.png");
         let hero = Hero {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
@@ -85,9 +88,11 @@ impl PlayState {
         let draw_shield = false;
         let shield_start_time = None;
         let teleport = false;
+        let hero_switch = false;
 
         Ok(PlayState{
-            hero_character,
+            hero_character_arrows,
+            hero_character_knife,
             shield_ability_position, 
             shiled_ability_cooldown_position, 
             teleport_ability_cooldown_position, 
@@ -100,6 +105,7 @@ impl PlayState {
             draw_shield,
             teleport,
             shield_start_time,
+            hero_switch,
         })
     }
 }
@@ -108,6 +114,7 @@ impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
+        //for hero with arrows
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
                 arrow.position.1 -= 10.5;
@@ -122,15 +129,13 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.shield_start_time = None;
             }
         }
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, Color::from_rgb(211, 211, 211));
-        let hero_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
-        let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero.size.0 / self.hero_character.width() as f32 , self.hero.size.1/ self.hero_character.height() as f32]);
-        graphics::draw(ctx, &self.hero_character, hero_draw_param)?;
-
+        //outside self.hero.swith == false so that the arrow goes on moving up when hero is switched with knife from arrows
         for arrow in &self.arrows {
             if arrow.ongoing == true {
                 let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 40.0);
@@ -139,13 +144,34 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
-        let radius = 80.0;
+        //for hero with arrow
+        if self.hero_switch == false {
+            let hero_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
+            let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
+            graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
 
-        if self.draw_shield == true {
-            let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
-            let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
-            graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
+    
+            let radius = 80.0;
+    
+            if self.draw_shield == true {
+                let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
+                let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
+                graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
+            }
         }
+        //for hero with knife
+        else {
+            let hero_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
+            let hero_draw_param  = DrawParam::default().dest([hero_dist_rect.x, hero_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
+            graphics::draw(ctx, &self.hero_character_knife, hero_draw_param)?;
+
+            //range where knife attack succeds
+            let radius = 120.0;
+            let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 15.0 + (self.hero.size.1 / 2.0)));
+            let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
+            graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
+        }
+
         graphics::present(ctx)?;
 
         Ok(())
@@ -159,12 +185,15 @@ impl EventHandler <ggez::GameError> for PlayState {
             y: f32,
         ) {
         if button == event::MouseButton::Left {
-            println!("left button in mouse clicked");
-            let new_arrow = Arrow {
-                position: (self.hero.position.0 - 47.0 + self.hero.size.0 / 2.0, self.hero.position.1),
-                ongoing: true,
-            };
-            self.arrows.push(new_arrow);
+            //for hero with arrows
+            if self.hero_switch == false {
+                println!("left button in mouse clicked");
+                let new_arrow = Arrow {
+                    position: (self.hero.position.0 - 47.0 + self.hero.size.0 / 2.0, self.hero.position.1),
+                    ongoing: true,
+                };
+                self.arrows.push(new_arrow);
+            }
         }
 
         if self.teleport {
@@ -214,6 +243,14 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
             KeyCode::F => {
                 println!("ultimate");
+            }
+            KeyCode::LControl => {
+                //false for hero with arrows and vice versa
+                if self.hero_switch == false {
+                    self.hero_switch = true;
+                } else {
+                    self.hero_switch = false;
+                }
             }
             _ => {}
         }
