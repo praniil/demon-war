@@ -121,7 +121,7 @@ impl PlayState {
         let hero = Hero {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
-            health_point: 10,
+            health_point: 150,
         };
 
         let bat_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/bat.png");
@@ -214,11 +214,11 @@ impl EventHandler <ggez::GameError> for PlayState {
             self.hero.health_point -= decrease_hp;
             self.hero_arrow_bat_collision = false;
             if self.bat.position.0 > self.hero.position.0 {
-                self.bat.position.0 -= 20.0;
-                self.bat.position.1 -= 20.0;
+                self.bat.position.0 -= 40.0;
+                self.bat.position.1 -= 40.0;
             } else {
-                self.bat.position.0 += 20.0;
-                self.bat.position.1 -= 20.0;
+                self.bat.position.0 += 40.0;
+                self.bat.position.1 -= 40.0;
             }
 
             if self.hero.health_point == 0 {
