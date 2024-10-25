@@ -10,6 +10,7 @@ use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
 use rand::Rng;
+use std::num;
 
 const DEFAULT_POS_HERO: f32 = 840.0;
 
@@ -26,6 +27,30 @@ struct Hero {
 struct Bat {
     size: (f32, f32),
     position: (f32, f32),
+}
+
+impl Bat {
+    //dda algorithm to track the hero 
+    fn update_bat_position(&mut self, hero_pos_x: f32, hero_pos_y: f32) -> (f32, f32) {
+        let dx = hero_pos_x - self.position.0;
+        let dy = hero_pos_y - self.position.1;
+
+        let larger = dx.abs() > dy.abs();
+        let steps;
+        if larger {
+            steps = dx.abs();
+        } else {
+            steps = dy.abs();
+        }
+
+        let xinc = dx / steps;
+        let yinc = dy / steps;
+
+        self.position.0 += xinc * 3.0;
+        self.position.1 += yinc * 3.0;
+
+        (self.position.0, self.position.1)
+    }
 }
 
 trait Gravity {
@@ -93,6 +118,7 @@ impl PlayState {
             size: (80.0, 80.0),
             position: get_random_position(),
         };
+
         println!("bat position x: {}, y: {}", bat.position.0, bat.position.1);
 
         let shield_ability_position= (11.0, 11.0);
@@ -139,6 +165,8 @@ impl EventHandler <ggez::GameError> for PlayState {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
         //for hero with arrows
+
+        (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
         for arrow in &mut self.arrows {
             if arrow.ongoing == true {
                 arrow.position.1 -= 10.5;
@@ -147,6 +175,8 @@ impl EventHandler <ggez::GameError> for PlayState {
                 }
             }
         }
+        
+        
         if let Some(start_time) = self.shield_start_time {
             if start_time.elapsed() > time::Duration::new(5, 0) {
                 self.draw_shield = false;
