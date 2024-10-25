@@ -9,6 +9,7 @@ use std::{fs, vec};
 use ggez::graphics::Image;
 use ggez::event;
 use ggez::input::keyboard::{KeyCode, KeyMods};
+use rand::Rng;
 
 const DEFAULT_POS_HERO: f32 = 840.0;
 
@@ -18,6 +19,11 @@ struct Arrow {
 }
 
 struct Hero {
+    size: (f32, f32),
+    position: (f32, f32),
+}
+
+struct Bat {
     size: (f32, f32),
     position: (f32, f32),
 }
@@ -49,6 +55,7 @@ fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
 pub struct PlayState {
     hero_character_arrows: Image,
     hero_character_knife: Image,
+    bat_img : Image,
     shield_ability_position: (f32, f32),
     shiled_ability_cooldown_position: (f32, f32),
     teleport_ability_position: (f32, f32),
@@ -57,6 +64,7 @@ pub struct PlayState {
     ultimate_ability_cooldown_position: (f32, f32),
     draw_arrow: bool,
     hero: Hero,
+    bat: Bat,
     arrows: Vec<Arrow>,
     draw_shield: bool,
     shield_start_time: Option<Instant>,
@@ -64,6 +72,12 @@ pub struct PlayState {
     hero_switch: bool,
 }
 
+fn get_random_position() -> (f32, f32){
+    let mut rng = rand::thread_rng();
+    let random_x: f32 = rng.gen_range(40.0..1800.0);
+    let random_y: f32 = rng.gen_range(40.0..800.0);
+    (random_x, random_y)
+}
 
 impl PlayState {
     pub fn new(ctx: &mut Context) -> GameResult<PlayState> {
@@ -73,6 +87,14 @@ impl PlayState {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
         };
+
+        let bat_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/bat.png");
+        let bat = Bat {
+            size: (80.0, 80.0),
+            position: get_random_position(),
+        };
+        println!("bat position x: {}, y: {}", bat.position.0, bat.position.1);
+
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
         let teleport_ability_position= (31.0, 31.0);
@@ -93,6 +115,7 @@ impl PlayState {
         Ok(PlayState{
             hero_character_arrows,
             hero_character_knife,
+            bat_img,
             shield_ability_position, 
             shiled_ability_cooldown_position, 
             teleport_ability_cooldown_position, 
@@ -106,6 +129,7 @@ impl PlayState {
             teleport,
             shield_start_time,
             hero_switch,
+            bat,
         })
     }
 }
@@ -138,11 +162,15 @@ impl EventHandler <ggez::GameError> for PlayState {
         //outside self.hero.swith == false so that the arrow goes on moving up when hero is switched with knife from arrows
         for arrow in &self.arrows {
             if arrow.ongoing == true {
-                let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 40.0);
+                let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 60.0);
                 let arrow_mess = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), arrow, Color::from_rgb(0, 102, 204)).unwrap();
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
+
+        let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
+        let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
+        graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
 
         //for hero with arrow
         if self.hero_switch == false {

@@ -644,6 +644,7 @@ dependencies = [
  "ggez",
  "glam 0.18.0",
  "nalgebra",
+ "rand",
 ]
 
 [[package]]
