@@ -76,11 +76,8 @@ impl HealthMeter for Hero {
         let health_percent = self.health_point.currrent / self.health_point.max;
         let meter_width = 90.0;
         let meter_height = 20.0;
-        println!("percent: {}", health_percent);
         let fill_width = health_percent * meter_width;
-        println!("fill width: {}", fill_width);
         let fill_height = meter_height - 4.0;
-        println!("fill heihght: {}", fill_height);
         (fill_width, fill_height)
     }
 }
@@ -90,11 +87,8 @@ impl HealthMeter for Bat {
         let health_percent = self.health_point.currrent / self.health_point.max;
         let meter_width = 80.0;
         let meter_height = 30.0;
-        println!("percent: {}", health_percent);
         let fill_width = health_percent * meter_width;
-        println!("fill width: {}", fill_width);
         let fill_height = meter_height - 3.0;
-        println!("fill heihght: {}", fill_height);
         (fill_width, fill_height)
     }
 }
@@ -177,8 +171,6 @@ impl PlayState {
             health_point: HpMeter { max:50.0, currrent: 50.0 },
             // health_point: 50,
         };
-
-        println!("bat position x: {}, y: {}", bat.position.0, bat.position.1);
 
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
@@ -373,7 +365,6 @@ impl EventHandler <ggez::GameError> for PlayState {
         if button == event::MouseButton::Left {
             //for hero with arrows
             if self.hero_switch == false {
-                println!("left button in mouse clicked");
                 let new_arrow = Arrow {
                     position: (self.hero.position.0 - 47.0 + self.hero.size.0 / 2.0, self.hero.position.1),
                     ongoing: true,
@@ -384,7 +375,6 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         if self.teleport {
             if button == event::MouseButton::Right {
-                println!("x position of click: {} and y: {}", x, y);
                 self.hero.position = (x, y);
                 self.teleport = false;
             }
@@ -416,6 +406,12 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.hero.position.0 += 80.0;
                 if self.hero.position.0 > 1920.0 - self.hero.size.0 {
                     self.hero.position.0 = 1920.0 - self.hero.size.0;
+                }
+            }
+            KeyCode::S => {
+                self.hero.position.1 += 80.0;
+                if self.hero.position.1 > DEFAULT_POS_HERO {
+                    self.hero.position.1 = DEFAULT_POS_HERO;
                 }
             }
             KeyCode::Q => {
