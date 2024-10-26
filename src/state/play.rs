@@ -354,8 +354,8 @@ impl EventHandler <ggez::GameError> for PlayState {
                 graphics::draw(ctx, &self.hero_character_knife, hero_draw_param)?;
 
                 //range where knife attack succeds
-                let radius = 120.0;
-                let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 15.0 + (self.hero.size.1 / 2.0)));
+                let radius = 140.0;
+                let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 35.0 + (self.hero.size.1 / 2.0)));
                 let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
                 graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
             }
