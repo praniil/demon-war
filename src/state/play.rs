@@ -86,7 +86,7 @@ impl HealthMeter for Bat {
     fn health_meter(&self) -> (f32, f32) {
         let health_percent = self.health_point.currrent / self.health_point.max;
         let meter_width = 80.0;
-        let meter_height = 30.0;
+        let meter_height = 18.0;
         let fill_width = health_percent * meter_width;
         let fill_height = meter_height - 3.0;
         (fill_width, fill_height)
@@ -290,6 +290,8 @@ impl EventHandler <ggez::GameError> for PlayState {
         let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
         graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
 
+        /*hero hp meter*/
+    
         if self.draw_hp_meter_hero {
             let (fill_width_hero, fill_height_hero) = get_health_meter_dimension(&self.hero);
 
@@ -303,6 +305,23 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         // Draw the filled part of the health meter
             let fill_rect = graphics::Rect::new(self.hero.position.0 + 10.0, self.hero.position.1 + 136.0, fill_width_hero, fill_height_hero);
+            let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
+            graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
+        }
+
+        /* bat hp meter */
+        if self.draw_hp_meter_bat {
+            let (fill_width_bat, fill_height_bat) = get_health_meter_dimension(&self.bat);
+            let meter_width_bat = 80.0;
+            let meter_height_bat = 18.0;
+
+            //draw background
+            let background_rect = graphics::Rect::new(self.bat.position.0, self.bat.position.1 - 34.0, meter_width_bat, meter_height_bat);
+            let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
+            graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
+
+            //draw filled part
+            let fill_rect = graphics::Rect::new(self.bat.position.0 + 2.0, self.bat.position.1 - 36.0, fill_width_bat, fill_height_bat);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
