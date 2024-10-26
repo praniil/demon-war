@@ -73,8 +73,34 @@ trait HealthMeter {
 
 impl HealthMeter for Hero {
     fn health_meter(&self) -> (f32, f32) {
-        (0.0, 0.0)
+        let health_percent = self.health_point.currrent / self.health_point.max;
+        let meter_width = 90.0;
+        let meter_height = 20.0;
+        println!("percent: {}", health_percent);
+        let fill_width = health_percent * meter_width;
+        println!("fill width: {}", fill_width);
+        let fill_height = meter_height - 4.0;
+        println!("fill heihght: {}", fill_height);
+        (fill_width, fill_height)
     }
+}
+
+impl HealthMeter for Bat {
+    fn health_meter(&self) -> (f32, f32) {
+        let health_percent = self.health_point.currrent / self.health_point.max;
+        let meter_width = 80.0;
+        let meter_height = 30.0;
+        println!("percent: {}", health_percent);
+        let fill_width = health_percent * meter_width;
+        println!("fill width: {}", fill_width);
+        let fill_height = meter_height - 3.0;
+        println!("fill heihght: {}", fill_height);
+        (fill_width, fill_height)
+    }
+}
+
+fn get_health_meter_dimension(character: &dyn HealthMeter) -> (f32, f32) {
+    character.health_meter()
 }
 
 trait Gravity {
@@ -122,6 +148,8 @@ pub struct PlayState {
     hero_arrow_bat_collision: bool,
     hero_knife_bat_collision: bool,
     draw_hero: bool,
+    draw_hp_meter_hero: bool,
+    draw_hp_meter_bat:bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -171,6 +199,8 @@ impl PlayState {
         let hero_arrow_bat_collision = false;
         let hero_knife_bat_collision = false;
         let draw_hero = true;
+        let draw_hp_meter_hero = false;
+        let draw_hp_meter_bat = false;
 
         Ok(PlayState{
             hero_character_arrows,
@@ -193,6 +223,8 @@ impl PlayState {
             hero_knife_bat_collision,
             hero_arrow_bat_collision,
             draw_hero,
+            draw_hp_meter_hero,
+            draw_hp_meter_bat,
         })
     }
 }
@@ -225,8 +257,10 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         if self.hero_arrow_bat_collision && self.draw_hero {
+            self.draw_hp_meter_hero = true;
+            self.draw_hp_meter_bat = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 25.0;
+            let mut decrease_hp = 15.0;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
@@ -242,6 +276,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
             if self.hero.health_point.currrent == 0.0 {
                 self.draw_hero = false;
+                self.draw_hp_meter_hero = false;
             }
         }
 
@@ -262,6 +297,23 @@ impl EventHandler <ggez::GameError> for PlayState {
         let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
         graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
+
+        if self.draw_hp_meter_hero {
+            let (fill_width_hero, fill_height_hero) = get_health_meter_dimension(&self.hero);
+
+            let meter_width_hero = 90.0;
+            let meter_height_hero = 20.0;
+
+        // Draw the background of the health meter
+            let background_rect = graphics::Rect::new(self.hero.position.0 + 5.0, self.hero.position.1 + 134.0, meter_width_hero, meter_height_hero);
+            let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
+            graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
+
+        // Draw the filled part of the health meter
+            let fill_rect = graphics::Rect::new(self.hero.position.0 + 10.0, self.hero.position.1 + 136.0, fill_width_hero, fill_height_hero);
+            let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
+            graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
+        }
 
         //for hero with arrow
         if self.draw_hero { 
