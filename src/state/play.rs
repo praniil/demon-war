@@ -1,7 +1,7 @@
 use ggez::mint::{Point2, Vector2};
 use ggez::{Context, GameResult};
 use ggez::event::EventHandler;
-use ggez::graphics::{self, drawable_size, Color, DrawParam, Mesh, DrawMode};
+use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect};
 use glam::Vec2;
 use core::time;
 use std::time::Instant;
@@ -66,7 +66,6 @@ impl Bat {
     }
 }
 
-
 trait HealthMeter {
     fn health_meter(&self) -> (f32, f32);
 }
@@ -122,6 +121,9 @@ fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
 }
 
 pub struct PlayState {
+    hero_arrow_dist_rect: Rect,
+    hero_knife_dist_rect: Rect,
+    bat_character: Rect,
     hero_character_arrows: Image,
     hero_character_knife: Image,
     bat_img : Image,
@@ -142,8 +144,11 @@ pub struct PlayState {
     hero_arrow_bat_collision: bool,
     hero_knife_bat_collision: bool,
     draw_hero: bool,
+    draw_bat: bool,
     draw_hp_meter_hero: bool,
     draw_hp_meter_bat:bool,
+    bat_inside_range: bool,
+    use_knife: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -191,12 +196,19 @@ impl PlayState {
         let hero_arrow_bat_collision = false;
         let hero_knife_bat_collision = false;
         let draw_hero = true;
+        let draw_bat = true;
         let draw_hp_meter_hero = false;
         let draw_hp_meter_bat = false;
+        let bat_inside_range= false;
+        let hero_arrow_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1, hero.size.0, hero.size.1);
+        let hero_knife_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1 + 15.0, hero.size.0, hero.size.1);
+        let use_knife = false;
+        let bat_character = graphics::Rect::new(bat.position.0, bat.position.1, bat.size.0, bat.size.1);
 
         Ok(PlayState{
             hero_character_arrows,
             hero_character_knife,
+            bat_character,
             bat_img,
             shield_ability_position, 
             shiled_ability_cooldown_position, 
@@ -215,8 +227,13 @@ impl PlayState {
             hero_knife_bat_collision,
             hero_arrow_bat_collision,
             draw_hero,
+            draw_bat,
             draw_hp_meter_hero,
             draw_hp_meter_bat,
+            bat_inside_range,
+            hero_arrow_dist_rect,
+            hero_knife_dist_rect,
+            use_knife,
         })
     }
 }
@@ -229,6 +246,7 @@ impl EventHandler <ggez::GameError> for PlayState {
         
         if self.draw_hero {
             (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
+            self.bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         }
 
         for arrow in &mut self.arrows {
@@ -248,11 +266,25 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
-        if self.hero_arrow_bat_collision && self.draw_hero {
+        if self.use_knife && self.draw_bat {
+            println!("bat hp: {}", self.bat.health_point.currrent);
+            let current_bat_hp = self.bat.health_point.currrent;
+            let mut decrease_hp = 25.0;
+            if current_bat_hp < decrease_hp {
+                decrease_hp = current_bat_hp;
+            }
+            self.bat.health_point.currrent -= decrease_hp;
+            if self.bat.health_point.currrent == 0.0 {
+                self.draw_hp_meter_bat = false;
+                self.draw_bat = false;
+            }
+        }
+
+        if self.hero_arrow_bat_collision && self.draw_hero && self.draw_bat {
             self.draw_hp_meter_hero = true;
             self.draw_hp_meter_bat = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 15.0;
+            let mut decrease_hp = 10.0;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
@@ -286,12 +318,14 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
-        let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
-        let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
-        graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
+        // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
+        if self.draw_bat {
+            let bat_character = graphics::Rect::new(self.bat_character.x, self.bat_character.y, self.bat_character.w, self.bat_character.h);
+            let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
+            graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
+        }
 
         /*hero hp meter*/
-    
         if self.draw_hp_meter_hero {
             let (fill_width_hero, fill_height_hero) = get_health_meter_dimension(&self.hero);
 
@@ -328,8 +362,8 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         //for hero with arrow
         if self.draw_hero { 
-            let hero_arrow_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
-            let hero_knife_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
+            let hero_arrow_dist_rect = graphics::Rect::new(self.hero_arrow_dist_rect.x, self.hero_arrow_dist_rect.y, self.hero_arrow_dist_rect.w, self.hero_arrow_dist_rect.h);
+            let hero_knife_dist_rect = graphics::Rect::new(self.hero_knife_dist_rect.x, self.hero_knife_dist_rect.y + 15.0,self.hero_knife_dist_rect.w, self.hero_knife_dist_rect.h);
 
             if self.hero_switch == false {
                 let hero_draw_param  = DrawParam::default().dest([hero_arrow_dist_rect.x, hero_arrow_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
@@ -344,7 +378,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                     graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
                 }
 
-                if hero_arrow_dist_rect.overlaps(&bat_character) {
+                if hero_arrow_dist_rect.overlaps(&self.bat_character) {
                     self.hero_arrow_bat_collision = true;
                 }
             }
@@ -358,17 +392,31 @@ impl EventHandler <ggez::GameError> for PlayState {
                 let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 35.0 + (self.hero.size.1 / 2.0)));
                 let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
                 graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
+
+                let corners = [
+                    nalgebra::Point2::new(self.bat.position.0, self.bat.position.1),
+                    nalgebra::Point2::new(self.bat.position.0, self.bat.position.1 + self.bat.size.1),
+                    nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1),
+                    nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1 + self.bat.size.1),
+                ];
+    
+                for corner in corners {
+                    let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
+                    if square_distance <= radius.powi(2) {
+                        self.bat_inside_range = true
+                    }
+                }
             }
 
-            if hero_arrow_dist_rect.overlaps(&bat_character) || hero_knife_dist_rect.overlaps(&bat_character) {
+
+            if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
                 self.hero_arrow_bat_collision = true;
             }
 
-            if hero_arrow_dist_rect.overlaps(&bat_character) || hero_knife_dist_rect.overlaps(&bat_character) {
+            if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
                 self.hero_arrow_bat_collision = true;
             }
         }
-
         graphics::present(ctx)?;
 
         Ok(())
@@ -381,25 +429,37 @@ impl EventHandler <ggez::GameError> for PlayState {
             x: f32,
             y: f32,
         ) {
-        if button == event::MouseButton::Left {
-            //for hero with arrows
-            if self.hero_switch == false {
-                let new_arrow = Arrow {
-                    position: (self.hero.position.0 - 47.0 + self.hero.size.0 / 2.0, self.hero.position.1),
-                    ongoing: true,
-                };
-                self.arrows.push(new_arrow);
+            if button == event::MouseButton::Left {
+                //for hero with arrows
+                if self.hero_switch == false {
+                    let new_arrow = Arrow {
+                        position: (self.hero.position.0 - 47.0 + self.hero.size.0 / 2.0, self.hero.position.1),
+                        ongoing: true,
+                    };
+                    self.arrows.push(new_arrow);
+                } else {    //for hero with knife
+                    println!("inside else");
+                    if self.bat_inside_range {
+                        println!("inside bat range");
+                        let point_vec = glam::vec2(x, y);
+                        let point = convert_glam_to_point(point_vec);
+                        if self.bat_character.contains(point) {
+                            println!("hit the bat");
+                            self.use_knife = true;
+                        }
+                    }
+                }  
+            }
+
+            if self.teleport {
+                if button == event::MouseButton::Right {
+                    self.hero.position = (x, y);
+                    self.teleport = false;
+                }
             }
         }
-
-        if self.teleport {
-            if button == event::MouseButton::Right {
-                self.hero.position = (x, y);
-                self.teleport = false;
-            }
-        }
-    }
-
+                        
+                        
     fn key_down_event(
             &mut self,
             _ctx: &mut Context,
@@ -407,38 +467,38 @@ impl EventHandler <ggez::GameError> for PlayState {
             _keymods: KeyMods,
             _repeat: bool,
         ) {
-        match keycode {
-            KeyCode:: A => {
-                self.hero.position.0 -= 80.0;
-                if self.hero.position.0 < 0.0 {
-                    self.hero.position.0 = 0.0;
+            match keycode {
+                KeyCode:: A => {
+                    self.hero.position.0 -= 80.0;
+                    if self.hero.position.0 < 0.0 {
+                        self.hero.position.0 = 0.0;
+                    }
                 }
-            }
-            KeyCode :: W => {
-                self.hero.position.1 -= 200.0;
-                if self.hero.position.1 < 0.0 {
-                    self.hero.position.1 = 0.0;
+                KeyCode :: W => {
+                    self.hero.position.1 -= 200.0;
+                    if self.hero.position.1 < 0.0 {
+                        self.hero.position.1 = 0.0;
+                    }
+                    println!("pressed w");
                 }
-                println!("pressed w");
-            }
-            KeyCode::D => {
-                self.hero.position.0 += 80.0;
-                if self.hero.position.0 > 1920.0 - self.hero.size.0 {
-                    self.hero.position.0 = 1920.0 - self.hero.size.0;
+                KeyCode::D => {
+                    self.hero.position.0 += 80.0;
+                    if self.hero.position.0 > 1920.0 - self.hero.size.0 {
+                        self.hero.position.0 = 1920.0 - self.hero.size.0;
+                    }
                 }
-            }
-            KeyCode::S => {
-                self.hero.position.1 += 80.0;
-                if self.hero.position.1 > DEFAULT_POS_HERO {
-                    self.hero.position.1 = DEFAULT_POS_HERO;
+                KeyCode::S => {
+                    self.hero.position.1 += 80.0;
+                    if self.hero.position.1 > DEFAULT_POS_HERO {
+                        self.hero.position.1 = DEFAULT_POS_HERO;
+                    }
                 }
-            }
-            KeyCode::Q => {
-                println!("pressed q");
-                self.draw_shield = true;
-                self.shield_start_time = Some(Instant::now());
-            }
-            KeyCode::E => {
+                KeyCode::Q => {
+                    println!("pressed q");
+                    self.draw_shield = true;
+                    self.shield_start_time = Some(Instant::now());
+                }
+                KeyCode::E => {
                 println!("pressed E");
                 self.teleport = true;
             }
@@ -463,6 +523,6 @@ fn load_image(ctx: &mut Context, file_path: &str) -> graphics::Image {
     let image = graphics::Image::from_bytes(ctx, &image_bytes).unwrap();
     image
 }
-
+    
 
 
