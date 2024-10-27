@@ -362,8 +362,8 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         //for hero with arrow
         if self.draw_hero { 
-            let hero_arrow_dist_rect = graphics::Rect::new(self.hero_arrow_dist_rect.x, self.hero_arrow_dist_rect.y, self.hero_arrow_dist_rect.w, self.hero_arrow_dist_rect.h);
-            let hero_knife_dist_rect = graphics::Rect::new(self.hero_knife_dist_rect.x, self.hero_knife_dist_rect.y + 15.0,self.hero_knife_dist_rect.w, self.hero_knife_dist_rect.h);
+            let hero_arrow_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
+            let hero_knife_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
 
             if self.hero_switch == false {
                 let hero_draw_param  = DrawParam::default().dest([hero_arrow_dist_rect.x, hero_arrow_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
