@@ -88,7 +88,7 @@ impl HealthMeter for Bat {
         let meter_width = 80.0;
         let meter_height = 18.0;
         let fill_width = health_percent * meter_width;
-        let fill_height = meter_height - 3.0;
+        let fill_height = meter_height - 5.0;
         (fill_width, fill_height)
     }
 }
@@ -269,7 +269,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                         decrease_hp = current_bat_hp;
                     }
                     self.bat.health_point.currrent -= decrease_hp;
-                    println!("current bat hp: {}", self.bat.health_point.currrent);
                     if self.bat.health_point.currrent == 0.0 {
                         self.draw_hp_meter_bat = false;
                         self.draw_bat = false;
@@ -291,7 +290,6 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         if self.use_knife && self.draw_bat && self.draw_hero{
-            println!("bat hp: {}", self.bat.health_point.currrent);
             let current_bat_hp = self.bat.health_point.currrent;
             let mut decrease_hp = 25.0;
             if current_bat_hp < decrease_hp {
@@ -384,7 +382,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
 
             //draw filled part
-            let fill_rect = graphics::Rect::new(self.bat.position.0 + 2.0, self.bat.position.1 - 36.0, fill_width_bat, fill_height_bat);
+            let fill_rect = graphics::Rect::new(self.bat.position.0 + 1.0, self.bat.position.1 - 35.0, fill_width_bat, fill_height_bat);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
@@ -467,12 +465,10 @@ impl EventHandler <ggez::GameError> for PlayState {
                     };
                     self.arrows.push(new_arrow);
                 } else {    //for hero with knife
-                    println!("inside else");
                     if self.bat_inside_range {
                         let point_vec = glam::vec2(x, y);
                         let point = convert_glam_to_point(point_vec);
                         if self.bat_character.contains(point) {
-                            println!("hit the bat");
                             self.use_knife = true;
                         }
                     }
@@ -507,7 +503,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                     if self.hero.position.1 < 0.0 {
                         self.hero.position.1 = 0.0;
                     }
-                    println!("pressed w");
                 }
                 KeyCode::D => {
                     self.hero.position.0 += 80.0;
@@ -522,12 +517,10 @@ impl EventHandler <ggez::GameError> for PlayState {
                     }
                 }
                 KeyCode::Q => {
-                    println!("pressed q");
                     self.draw_shield = true;
                     self.shield_start_time = Some(Instant::now());
                 }
                 KeyCode::E => {
-                println!("pressed E");
                 self.teleport = true;
             }
             KeyCode::F => {
