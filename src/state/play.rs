@@ -4,7 +4,6 @@ use ggez::event::EventHandler;
 use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect};
 use glam::Vec2;
 use core::time;
-use std::process::exit;
 use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
@@ -60,8 +59,8 @@ impl Bat {
         let xinc = dx / steps;
         let yinc = dy / steps;
 
-        self.position.0 += xinc * 3.0;
-        self.position.1 += yinc * 3.0;
+        self.position.0 += xinc * 2.5;
+        self.position.1 += yinc * 2.5;
 
         (self.position.0, self.position.1)
     }
@@ -271,7 +270,10 @@ impl EventHandler <ggez::GameError> for PlayState {
                     self.bat.health_point.currrent -= decrease_hp;
                     if self.bat.health_point.currrent == 0.0 {
                         self.draw_hp_meter_bat = false;
-                        self.draw_bat = false;
+                        (self.bat.position.0, self.bat.position.1) = get_random_position();
+                        self.bat.health_point.currrent = self.bat.health_point.max;
+                        // self.draw_bat = false;
+                        self.arrow_overlap_bat = false;
                     }
                     arrow.ongoing = false; 
                 }
@@ -298,7 +300,9 @@ impl EventHandler <ggez::GameError> for PlayState {
             self.bat.health_point.currrent -= decrease_hp;
             if self.bat.health_point.currrent == 0.0 {
                 self.draw_hp_meter_bat = false;
-                self.draw_bat = false;
+                (self.bat.position.0, self.bat.position.1) = get_random_position();
+                self.bat.health_point.currrent = self.bat.health_point.max;
+                // self.draw_bat = false;
             }
             self.use_knife = false;
         }
@@ -346,7 +350,7 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
-        if self.draw_bat {
+        if self.draw_bat  {
             let bat_character = graphics::Rect::new(self.bat_character.x, self.bat_character.y, self.bat_character.w, self.bat_character.h);
             let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
             graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
