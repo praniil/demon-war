@@ -345,6 +345,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hero = false;
                 self.draw_bat = false;
                 self.draw_hp_meter_hero = false;
+                self.draw_hp_meter_bat = false;
             }
         }
 
