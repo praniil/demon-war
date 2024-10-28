@@ -4,6 +4,7 @@ use ggez::event::EventHandler;
 use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect};
 use glam::Vec2;
 use core::time;
+use std::process::exit;
 use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
@@ -123,6 +124,7 @@ fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
 pub struct PlayState {
     hero_arrow_dist_rect: Rect,
     hero_knife_dist_rect: Rect,
+    arrow_rect: Rect,
     bat_character: Rect,
     hero_character_arrows: Image,
     hero_character_knife: Image,
@@ -149,6 +151,7 @@ pub struct PlayState {
     draw_hp_meter_bat:bool,
     bat_inside_range: bool,
     use_knife: bool,
+    arrow_overlap_bat: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -173,10 +176,12 @@ impl PlayState {
         let bat = Bat {
             size: (80.0, 80.0),
             position: get_random_position(),
+            // position: (90.0, 90.0),
             health_point: HpMeter { max:50.0, currrent: 50.0 },
             // health_point: 50,
         };
 
+        
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
         let teleport_ability_position= (31.0, 31.0);
@@ -188,6 +193,7 @@ impl PlayState {
             position : (hero.position.0 - 47.0 + hero.size.0 / 2.0, hero.position.1),
             ongoing : false
         };
+        let arrow_rect = graphics::Rect::new(arrow.position.0 - 2.0 + hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 60.0);
         let arrows = vec![arrow];
         let draw_shield = false;
         let shield_start_time = None;
@@ -204,7 +210,8 @@ impl PlayState {
         let hero_knife_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1 + 15.0, hero.size.0, hero.size.1);
         let use_knife = false;
         let bat_character = graphics::Rect::new(bat.position.0, bat.position.1, bat.size.0, bat.size.1);
-
+        let arrow_overlap_bat = false;
+        
         Ok(PlayState{
             hero_character_arrows,
             hero_character_knife,
@@ -234,6 +241,8 @@ impl PlayState {
             hero_arrow_dist_rect,
             hero_knife_dist_rect,
             use_knife,
+            arrow_rect,
+            arrow_overlap_bat,
         })
     }
 }
@@ -250,9 +259,24 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         for arrow in &mut self.arrows {
-            if arrow.ongoing == true {
-                arrow.position.1 -= 10.5;
-                if arrow.position.1 < 0.0 {
+            if arrow.ongoing {
+                arrow.position.1 -= 20.5;
+                if self.arrow_overlap_bat && self.draw_bat && self.draw_hero{
+                    self.draw_hp_meter_bat = true;
+                    let current_bat_hp = self.bat.health_point.currrent;
+                    let mut decrease_hp = 25.0;
+                    if current_bat_hp < decrease_hp {
+                        decrease_hp = current_bat_hp;
+                    }
+                    self.bat.health_point.currrent -= decrease_hp;
+                    println!("current bat hp: {}", self.bat.health_point.currrent);
+                    if self.bat.health_point.currrent == 0.0 {
+                        self.draw_hp_meter_bat = false;
+                        self.draw_bat = false;
+                    }
+                    arrow.ongoing = false; 
+                }
+                if self.arrow_rect.y < 0.0 {
                     arrow.ongoing = false; 
                 }
             }
@@ -266,7 +290,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
-        if self.use_knife && self.draw_bat {
+        if self.use_knife && self.draw_bat && self.draw_hero{
             println!("bat hp: {}", self.bat.health_point.currrent);
             let current_bat_hp = self.bat.health_point.currrent;
             let mut decrease_hp = 25.0;
@@ -278,11 +302,12 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
                 self.draw_bat = false;
             }
+            self.use_knife = false;
         }
-
+        
         if self.hero_arrow_bat_collision && self.draw_hero && self.draw_bat {
-            self.draw_hp_meter_hero = true;
             self.draw_hp_meter_bat = true;
+            self.draw_hp_meter_hero = true;
             let hp = self.hero.health_point.currrent;
             let mut decrease_hp = 10.0;
             if hp < decrease_hp {
@@ -300,6 +325,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
             if self.hero.health_point.currrent == 0.0 {
                 self.draw_hero = false;
+                self.draw_bat = false;
                 self.draw_hp_meter_hero = false;
             }
         }
@@ -314,6 +340,9 @@ impl EventHandler <ggez::GameError> for PlayState {
             if arrow.ongoing == true {
                 let arrow = graphics::Rect::new(arrow.position.0 - 2.0 + self.hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 60.0);
                 let arrow_mess = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), arrow, Color::from_rgb(0, 102, 204)).unwrap();
+                if arrow.overlaps(&self.bat_character) {
+                    self.arrow_overlap_bat = true;
+                }
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
@@ -440,7 +469,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                 } else {    //for hero with knife
                     println!("inside else");
                     if self.bat_inside_range {
-                        println!("inside bat range");
                         let point_vec = glam::vec2(x, y);
                         let point = convert_glam_to_point(point_vec);
                         if self.bat_character.contains(point) {
