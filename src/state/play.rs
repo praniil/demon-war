@@ -151,6 +151,7 @@ pub struct PlayState {
     bat_inside_range: bool,
     use_knife: bool,
     arrow_overlap_bat: bool,
+    ultimate_increase_health: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -210,6 +211,7 @@ impl PlayState {
         let use_knife = false;
         let bat_character = graphics::Rect::new(bat.position.0, bat.position.1, bat.size.0, bat.size.1);
         let arrow_overlap_bat = false;
+        let ultimate_increase_health = false;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -242,6 +244,7 @@ impl PlayState {
             use_knife,
             arrow_rect,
             arrow_overlap_bat,
+            ultimate_increase_health,
         })
     }
 }
@@ -250,8 +253,22 @@ impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
-        //for hero with arrows
         
+        if self.ultimate_increase_health {
+            let mut increase_hp = 15.0;
+            let difference_hp = self.hero.health_point.max - self.hero.health_point.currrent;
+            if difference_hp < increase_hp {
+                increase_hp = difference_hp;
+            }
+            self.hero.health_point.currrent += increase_hp;
+            if self.hero.health_point.currrent == self.hero.health_point.max {
+                println!("current hp: {}", self.hero.health_point.currrent);
+                self.hero.health_point.currrent = self.hero.health_point.max - 15.0;
+                self.ultimate_increase_health = false;
+            }
+        }
+
+        //for hero with arrows
         if self.draw_hero {
             (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
             self.bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
@@ -261,6 +278,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             if arrow.ongoing {
                 arrow.position.1 -= 20.5;
                 if self.arrow_overlap_bat && self.draw_bat && self.draw_hero{
+                    println!("overlaps");
                     self.draw_hp_meter_bat = true;
                     let current_bat_hp = self.bat.health_point.currrent;
                     let mut decrease_hp = 25.0;
@@ -269,15 +287,14 @@ impl EventHandler <ggez::GameError> for PlayState {
                     }
                     self.bat.health_point.currrent -= decrease_hp;
                     if self.bat.health_point.currrent == 0.0 {
-                        self.draw_hp_meter_bat = false;
-                        (self.bat.position.0, self.bat.position.1) = get_random_position();
+                        self.bat.position = get_random_position();
                         self.bat.health_point.currrent = self.bat.health_point.max;
-                        // self.draw_bat = false;
-                        self.arrow_overlap_bat = false;
+                        self.draw_hp_meter_bat = false;
                     }
+                    self.arrow_overlap_bat = false;
                     arrow.ongoing = false; 
                 }
-                if self.arrow_rect.y < 0.0 {
+                if arrow.position.1 < 0.0 {
                     arrow.ongoing = false; 
                 }
             }
@@ -302,7 +319,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
                 (self.bat.position.0, self.bat.position.1) = get_random_position();
                 self.bat.health_point.currrent = self.bat.health_point.max;
-                // self.draw_bat = false;
             }
             self.use_knife = false;
         }
@@ -359,7 +375,6 @@ impl EventHandler <ggez::GameError> for PlayState {
         /*hero hp meter*/
         if self.draw_hp_meter_hero {
             let (fill_width_hero, fill_height_hero) = get_health_meter_dimension(&self.hero);
-
             let meter_width_hero = 90.0;
             let meter_height_hero = 20.0;
 
@@ -528,6 +543,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.teleport = true;
             }
             KeyCode::F => {
+                self.ultimate_increase_health = true;
                 println!("ultimate");
             }
             KeyCode::LControl => {
