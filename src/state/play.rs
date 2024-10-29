@@ -39,7 +39,7 @@ struct Dinosaur {
 
 impl Dinosaur{
     fn update_position(&mut self) -> (f32, f32){
-        self.current_position.0 -= 3.0;
+        self.current_position.0 -= 2.5;
         if self.current_position.0 < 0.0 {
             self.current_position = self.default_position;
         }
@@ -215,9 +215,9 @@ impl PlayState {
         let dinosaur_image = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/dinosaur.png");
 
         let dinosaur = Dinosaur {
-            default_position: (1820.0, 840.0),
+            default_position: (1820.0, 880.0),
             size: (140.0, 120.0),
-            current_position: (1820.0, 840.0),
+            current_position: (1820.0, 880.0),
             health_point: HpMeter {
                 max: 50.0,
                 currrent: 50.0
@@ -426,7 +426,6 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         if self.use_knife_dino && self.draw_hero && self.draw_dino {
-            println!("inside here");
             self.draw_hp_meter_dinosaur = true;
             let current_dino_hp = self.dinosaur.health_point.currrent;
             let mut decrease_hp = 25.0;
@@ -448,7 +447,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             self.draw_hp_meter_bat = true;
             self.draw_hp_meter_hero = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 15.0;
+            let mut decrease_hp = 10.0;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
@@ -463,7 +462,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
 
             if self.hero.health_point.currrent == 0.0 {
-                println!("all false");
                 self.draw_hero = false;
                 self.draw_bat = false;
                 self.draw_hp_meter_hero = false;
@@ -658,11 +656,9 @@ impl EventHandler <ggez::GameError> for PlayState {
                         }
                     }
                     if self.dino_inside_range {
-                        println!("clicked");
                         let point_vec = glam::vec2(x, y);
                         let point = convert_glam_to_point(point_vec);
                         if self.dino_rect.contains(point) {
-                            println!("inside cotaitn");
                             self.use_knife_dino = true;
                         }
                     }
