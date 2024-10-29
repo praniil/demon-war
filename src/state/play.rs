@@ -4,6 +4,7 @@ use ggez::event::EventHandler;
 use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect};
 use glam::Vec2;
 use core::time;
+use std::thread::current;
 use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
@@ -37,11 +38,12 @@ struct Dinosaur {
 }
 
 impl Dinosaur{
-    fn update_position(&mut self) {
+    fn update_position(&mut self) -> (f32, f32){
         self.current_position.0 -= 3.0;
         if self.current_position.0 < 0.0 {
             self.current_position = self.default_position;
         }
+        (self.current_position.0, self.current_position.1)
     }
 }
 
@@ -161,6 +163,7 @@ pub struct PlayState {
     hero_arrow_dist_rect: Rect,
     hero_knife_dist_rect: Rect,
     arrow_rect: Rect,
+    dino_rect: Rect,
     bat_character: Rect,
     hero_character_arrows: Image,
     hero_character_knife: Image,
@@ -189,10 +192,13 @@ pub struct PlayState {
     draw_hp_meter_bat:bool,
     draw_hp_meter_dinosaur: bool,
     bat_inside_range: bool,
-    use_knife: bool,
+    use_knife_bat: bool,
     arrow_overlap_bat: bool,
     ultimate_increase_health: bool,
     dinosaur_hero_overlaps: bool,
+    dino_inside_range: bool,
+    use_knife_dino: bool,
+    draw_dino: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -267,6 +273,10 @@ impl PlayState {
         let arrow_overlap_bat = false;
         let ultimate_increase_health = false;
         let dinosaur_hero_overlaps= false;
+        let dino_inside_range = false;
+        let dino_rect = graphics::Rect::new(dinosaur.current_position.0, dinosaur.current_position.1, dinosaur.size.0, dinosaur.size.1);
+        let use_knife_dino= false;
+        let draw_dino = true;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -299,11 +309,15 @@ impl PlayState {
             bat_inside_range,
             hero_arrow_dist_rect,
             hero_knife_dist_rect,
-            use_knife,
+            use_knife_bat: use_knife,
             arrow_rect,
             arrow_overlap_bat,
             ultimate_increase_health,
             dinosaur_hero_overlaps,
+            dino_inside_range,
+            dino_rect,
+            use_knife_dino,
+            draw_dino,
         })
     }
 }
@@ -313,12 +327,14 @@ impl EventHandler <ggez::GameError> for PlayState {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         gravity_objects.push(&mut self.dinosaur);
         apply_gravity(&mut gravity_objects);
-        self.dinosaur.update_position();
-        if self.dinosaur_hero_overlaps {
+
+        //dinosaur attacking hero
+        (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
+        if self.dinosaur_hero_overlaps && self.draw_dino && self.draw_hero{
             self.draw_hp_meter_hero = true;
             self.draw_hp_meter_dinosaur = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 10.0;
+            let mut decrease_hp = 25.0;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
@@ -337,6 +353,8 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_bat = false;
                 self.draw_hp_meter_hero = false;
                 self.draw_hp_meter_bat = false;
+                self.draw_dino = false;
+                self.draw_hp_meter_dinosaur = false;
             }
         }
         
@@ -392,7 +410,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
-        if self.use_knife && self.draw_bat && self.draw_hero{
+        if self.use_knife_bat && self.draw_bat && self.draw_hero{
             let current_bat_hp = self.bat.health_point.currrent;
             let mut decrease_hp = 25.0;
             if current_bat_hp < decrease_hp {
@@ -404,14 +422,33 @@ impl EventHandler <ggez::GameError> for PlayState {
                 (self.bat.position.0, self.bat.position.1) = get_random_position();
                 self.bat.health_point.currrent = self.bat.health_point.max;
             }
-            self.use_knife = false;
+            self.use_knife_bat = false;
         }
-        
-        if self.hero_arrow_bat_collision && self.draw_hero && self.draw_bat {
+
+        if self.use_knife_dino && self.draw_hero && self.draw_dino {
+            println!("inside here");
+            self.draw_hp_meter_dinosaur = true;
+            let current_dino_hp = self.dinosaur.health_point.currrent;
+            let mut decrease_hp = 25.0;
+            if current_dino_hp < decrease_hp {
+                decrease_hp = current_dino_hp;
+            }
+            self.dinosaur.health_point.currrent -= decrease_hp;
+            if self.dinosaur.health_point.currrent == 0.0 {
+                // self.draw_dino = false;
+                self.draw_hp_meter_dinosaur = false;
+                self.dinosaur.current_position = self.dinosaur.default_position;
+                self.dinosaur.health_point.currrent = self.dinosaur.health_point.max;
+            }
+            self.use_knife_dino = false;   
+        }
+
+        //bat attacking the hero
+        if self.hero_arrow_bat_collision && self.draw_hero && self.draw_bat{
             self.draw_hp_meter_bat = true;
             self.draw_hp_meter_hero = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 10.0;
+            let mut decrease_hp = 15.0;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
@@ -426,10 +463,13 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
 
             if self.hero.health_point.currrent == 0.0 {
+                println!("all false");
                 self.draw_hero = false;
                 self.draw_bat = false;
                 self.draw_hp_meter_hero = false;
                 self.draw_hp_meter_bat = false;
+                self.draw_dino = false;
+                self.draw_hp_meter_dinosaur = false;
             }
         }
 
@@ -458,9 +498,12 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
         
         //draw dinosaur
-        let dinosaur_rect = graphics::Rect::new(self.dinosaur.current_position.0, self.dinosaur.current_position.1, self.dinosaur.size.0, self.dinosaur.size.1);
-        let dinosaur_draw_param = DrawParam::default().dest([dinosaur_rect.x, dinosaur_rect.y]).scale([self.dinosaur.size.0 / self.dinosaur_image.width() as f32, self.dinosaur.size.1 / self.dinosaur_image.height() as f32]);
-        graphics::draw(ctx, &self.dinosaur_image, dinosaur_draw_param).unwrap();
+        if self.draw_dino {
+            let dinosaur_rect = self.dino_rect;
+            // let dinosaur_rect = graphics::Rect::new(self.dinosaur.current_position.0, self.dinosaur.current_position.1, self.dinosaur.size.0, self.dinosaur.size.1);
+            let dinosaur_draw_param = DrawParam::default().dest([dinosaur_rect.x, dinosaur_rect.y]).scale([self.dinosaur.size.0 / self.dinosaur_image.width() as f32, self.dinosaur.size.1 / self.dinosaur_image.height() as f32]);
+            graphics::draw(ctx, &self.dinosaur_image, dinosaur_draw_param).unwrap();
+        }
         
         /*hero hp meter*/
         if self.draw_hp_meter_hero {
@@ -545,21 +588,35 @@ impl EventHandler <ggez::GameError> for PlayState {
                 let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
                 graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
                 
-                let corners = [
+                let corners_bat = [
                     nalgebra::Point2::new(self.bat.position.0, self.bat.position.1),
                     nalgebra::Point2::new(self.bat.position.0, self.bat.position.1 + self.bat.size.1),
                     nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1),
                     nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1 + self.bat.size.1),
-                    ];
+                ];
                     
-                    for corner in corners {
-                        let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
-                        if square_distance <= radius.powi(2) {
-                            self.bat_inside_range = true
-                        }
+                for corner in corners_bat {
+                    let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
+                    if square_distance <= radius.powi(2) {
+                        self.bat_inside_range = true
                     }
+                }
+
+                 let corners_dino = [
+                    nalgebra::Point2::new(self.dinosaur.current_position.0, self.dinosaur.current_position.1),
+                    nalgebra::Point2::new(self.dinosaur.current_position.0, self.dinosaur.current_position.1 + self.dinosaur.size.1),
+                    nalgebra::Point2::new(self.dinosaur.current_position.0 + self.dinosaur.size.0, self.dinosaur.current_position.1),
+                    nalgebra::Point2::new(self.dinosaur.current_position.0 + self.dinosaur.size.0, self.dinosaur.current_position.1 + self.dinosaur.size.1),
+                ];
+                    
+                for corner in corners_dino {
+                    let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
+                    if square_distance <= radius.powi(2) {
+                        self.dino_inside_range = true
+                    }
+                }
+
             }
-                
                 
             if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
                 self.hero_arrow_bat_collision = true;
@@ -567,7 +624,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
             self.hero_arrow_bat_collision = true;
             }
-            if dinosaur_rect.overlaps(&hero_arrow_dist_rect) || dinosaur_rect.overlaps(&hero_knife_dist_rect) {
+            if self.dino_rect.overlaps(&hero_arrow_dist_rect) || self.dino_rect.overlaps(&hero_knife_dist_rect) {
                 self.dinosaur_hero_overlaps = true;
             }
         }
@@ -593,11 +650,20 @@ impl EventHandler <ggez::GameError> for PlayState {
                     };
                     self.arrows.push(new_arrow);
                 } else {    //for hero with knife
-                    if self.bat_inside_range {
+                    if self.bat_inside_range{
                         let point_vec = glam::vec2(x, y);
                         let point = convert_glam_to_point(point_vec);
                         if self.bat_character.contains(point) {
-                            self.use_knife = true;
+                            self.use_knife_bat = true;
+                        }
+                    }
+                    if self.dino_inside_range {
+                        println!("clicked");
+                        let point_vec = glam::vec2(x, y);
+                        let point = convert_glam_to_point(point_vec);
+                        if self.dino_rect.contains(point) {
+                            println!("inside cotaitn");
+                            self.use_knife_dino = true;
                         }
                     }
                 }  
