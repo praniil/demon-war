@@ -33,6 +33,7 @@ struct Dinosaur {
     size : (f32, f32),
     default_position: (f32, f32),
     current_position: (f32, f32),
+    health_point: HpMeter,
 }
 
 impl Dinosaur{
@@ -111,6 +112,17 @@ fn get_health_meter_dimension(character: &dyn HealthMeter) -> (f32, f32) {
     character.health_meter()
 }
 
+impl HealthMeter for Dinosaur {
+    fn health_meter(&self) -> (f32, f32) {
+        let health_percent = self.health_point.currrent / self.health_point.max;
+        let meter_width = 90.0;
+        let meter_height = 20.0;
+        let fill_width = health_percent * meter_width;
+        let fill_height = meter_height - 5.0;
+        (fill_width, fill_height)
+    }
+}
+
 trait Gravity {
     fn gravity(&mut self);
 }
@@ -175,6 +187,7 @@ pub struct PlayState {
     draw_bat: bool,
     draw_hp_meter_hero: bool,
     draw_hp_meter_bat:bool,
+    draw_hp_meter_dinosaur: bool,
     bat_inside_range: bool,
     use_knife: bool,
     arrow_overlap_bat: bool,
@@ -199,6 +212,10 @@ impl PlayState {
             default_position: (1820.0, 840.0),
             size: (140.0, 120.0),
             current_position: (1820.0, 840.0),
+            health_point: HpMeter {
+                max: 50.0,
+                currrent: 50.0
+            }
         };
 
         let hero = Hero {
@@ -241,6 +258,7 @@ impl PlayState {
         let draw_bat = true;
         let draw_hp_meter_hero = false;
         let draw_hp_meter_bat = false;
+        let draw_hp_meter_dinosaur = false;
         let bat_inside_range= false;
         let hero_arrow_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1, hero.size.0, hero.size.1);
         let hero_knife_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1 + 15.0, hero.size.0, hero.size.1);
@@ -277,6 +295,7 @@ impl PlayState {
             draw_bat,
             draw_hp_meter_hero,
             draw_hp_meter_bat,
+            draw_hp_meter_dinosaur,
             bat_inside_range,
             hero_arrow_dist_rect,
             hero_knife_dist_rect,
@@ -297,6 +316,7 @@ impl EventHandler <ggez::GameError> for PlayState {
         self.dinosaur.update_position();
         if self.dinosaur_hero_overlaps {
             self.draw_hp_meter_hero = true;
+            self.draw_hp_meter_dinosaur = true;
             let hp = self.hero.health_point.currrent;
             let mut decrease_hp = 10.0;
             if hp < decrease_hp {
@@ -472,6 +492,22 @@ impl EventHandler <ggez::GameError> for PlayState {
             
             //draw filled part
             let fill_rect = graphics::Rect::new(self.bat.position.0 + 1.0, self.bat.position.1 - 35.0, fill_width_bat, fill_height_bat);
+            let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
+            graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
+        }
+
+        if self.draw_hp_meter_dinosaur {
+            let (fill_width_dino, fill_height_dino) = get_health_meter_dimension(&self.dinosaur);
+            let meter_width_dino = 100.0;
+            let meter_height_dino = 20.0;
+            
+            // Draw the background of the health meter
+            let background_rect = graphics::Rect::new(self.dinosaur.current_position.0 + 5.0, self.dinosaur.current_position.1 + 134.0, meter_width_dino, meter_height_dino);
+            let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
+            graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
+            
+            // Draw the filled part of the health meter
+            let fill_rect = graphics::Rect::new(self.dinosaur.current_position.0 + 10.0, self.dinosaur.current_position.1 + 136.0, fill_width_dino, fill_height_dino);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
