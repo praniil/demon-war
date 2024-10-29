@@ -80,6 +80,9 @@ impl Bat {
         self.position.0 += xinc * 2.0;
         self.position.1 += yinc * 2.0;
 
+        // self.position.0 += xinc * 0.0;
+        // self.position.1 += yinc * 0.0;
+
         (self.position.0, self.position.1)
     }
 }
@@ -227,7 +230,7 @@ impl PlayState {
         let hero = Hero {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
-            health_point: HpMeter { max:150.0, currrent: 150.0 },
+            health_point: HpMeter { max: 150.0, currrent: 150.0 },
             // health_point: 150,
         };
 
@@ -334,20 +337,20 @@ impl EventHandler <ggez::GameError> for PlayState {
             self.draw_hp_meter_hero = true;
             self.draw_hp_meter_dinosaur = true;
             let hp = self.hero.health_point.currrent;
-            let mut decrease_hp = 25.0;
+            let mut decrease_hp = 18.75;
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
-
-            self.hero.health_point.currrent -= decrease_hp;
+            if !self.draw_shield {
+                self.hero.health_point.currrent -= decrease_hp;
+            }
             self.dinosaur_hero_overlaps = false;
             if self.dinosaur.current_position.0 > self.hero.position.0 {
-                self.dinosaur.current_position.0 += 40.0;
+                self.dinosaur.current_position.0 += 80.0;
             } else {
                 self.dinosaur.current_position.1 -= 80.0;
                 self.dinosaur.current_position.0 += 100.0;
             }
-
             if self.hero.health_point.currrent == 0.0 {
                 self.draw_hero = false;
                 self.draw_bat = false;
@@ -451,7 +454,9 @@ impl EventHandler <ggez::GameError> for PlayState {
             if hp < decrease_hp {
                 decrease_hp = hp;
             }
-            self.hero.health_point.currrent -= decrease_hp;
+            if !self.draw_shield {
+                self.hero.health_point.currrent -= decrease_hp;
+            }
             self.hero_arrow_bat_collision = false;
             if self.bat.position.0 > self.hero.position.0 {
                 self.bat.position.0 -= 40.0;
