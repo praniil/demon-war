@@ -29,6 +29,22 @@ struct Hero {
     health_point: HpMeter,
 }
 
+struct Dinosaur {
+    size : (f32, f32),
+    default_position: (f32, f32),
+    current_position: (f32, f32),
+}
+
+impl Dinosaur{
+    fn update_position(&mut self) {
+        println!("inside dinosaure update");
+        self.current_position.0 -= 5.0;
+        if self.current_position.0 < 0.0 {
+            self.current_position = self.default_position;
+        }
+    }
+}
+
 // impl std::ops::Drop for Hero{
 //     fn drop(&mut self) {
 //         println!("hero dropped");
@@ -128,6 +144,8 @@ pub struct PlayState {
     hero_character_arrows: Image,
     hero_character_knife: Image,
     bat_img : Image,
+    dinosaur_image: Image,
+    dinosaur: Dinosaur,
     shield_ability_position: (f32, f32),
     shiled_ability_cooldown_position: (f32, f32),
     teleport_ability_position: (f32, f32),
@@ -152,6 +170,7 @@ pub struct PlayState {
     use_knife: bool,
     arrow_overlap_bat: bool,
     ultimate_increase_health: bool,
+    dinosaur_hero_overlaps: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -165,6 +184,14 @@ impl PlayState {
     pub fn new(ctx: &mut Context) -> GameResult<PlayState> {
         let hero_character_arrows = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/copy_hero.png");
         let hero_character_knife = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/hero_knife.png");
+        let dinosaur_image = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/dinosaur.png");
+
+        let dinosaur = Dinosaur {
+            default_position: (1820.0, 840.0),
+            size: (140.0, 120.0),
+            current_position: (1820.0, 840.0),
+        };
+
         let hero = Hero {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
@@ -212,12 +239,15 @@ impl PlayState {
         let bat_character = graphics::Rect::new(bat.position.0, bat.position.1, bat.size.0, bat.size.1);
         let arrow_overlap_bat = false;
         let ultimate_increase_health = false;
+        let dinosaur_hero_overlaps= false;
         
         Ok(PlayState{
             hero_character_arrows,
             hero_character_knife,
             bat_character,
             bat_img,
+            dinosaur_image,
+            dinosaur,
             shield_ability_position, 
             shiled_ability_cooldown_position, 
             teleport_ability_cooldown_position, 
@@ -245,6 +275,7 @@ impl PlayState {
             arrow_rect,
             arrow_overlap_bat,
             ultimate_increase_health,
+            dinosaur_hero_overlaps,
         })
     }
 }
@@ -253,7 +284,8 @@ impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         apply_gravity(&mut gravity_objects);
-        
+        self.dinosaur.update_position();
+
         if self.ultimate_increase_health {
             let mut increase_hp = 15.0;
             let difference_hp = self.hero.health_point.max - self.hero.health_point.currrent;
@@ -372,19 +404,24 @@ impl EventHandler <ggez::GameError> for PlayState {
             let bat_draw_param  = DrawParam::default().dest([bat_character.x, bat_character.y]).scale([self.bat.size.0 / self.bat_img.width() as f32, self.bat.size.1 / self.bat_img.width() as f32]);
             graphics::draw(ctx, &self.bat_img, bat_draw_param)?;
         }
-
+        
+        //draw dinosaur
+        let dinosaur_rect = graphics::Rect::new(self.dinosaur.current_position.0, self.dinosaur.current_position.1, self.dinosaur.size.0, self.dinosaur.size.1);
+        let dinosaur_draw_param = DrawParam::default().dest([dinosaur_rect.x, dinosaur_rect.y]).scale([self.dinosaur.size.0 / self.dinosaur_image.width() as f32, self.dinosaur.size.1 / self.dinosaur_image.height() as f32]);
+        graphics::draw(ctx, &self.dinosaur_image, dinosaur_draw_param).unwrap();
+        
         /*hero hp meter*/
         if self.draw_hp_meter_hero {
             let (fill_width_hero, fill_height_hero) = get_health_meter_dimension(&self.hero);
             let meter_width_hero = 90.0;
             let meter_height_hero = 20.0;
-
-        // Draw the background of the health meter
+            
+            // Draw the background of the health meter
             let background_rect = graphics::Rect::new(self.hero.position.0 + 5.0, self.hero.position.1 + 134.0, meter_width_hero, meter_height_hero);
             let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
             graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
-
-        // Draw the filled part of the health meter
+            
+            // Draw the filled part of the health meter
             let fill_rect = graphics::Rect::new(self.hero.position.0 + 10.0, self.hero.position.1 + 136.0, fill_width_hero, fill_height_hero);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
@@ -395,36 +432,36 @@ impl EventHandler <ggez::GameError> for PlayState {
             let (fill_width_bat, fill_height_bat) = get_health_meter_dimension(&self.bat);
             let meter_width_bat = 80.0;
             let meter_height_bat = 18.0;
-
+            
             //draw background
             let background_rect = graphics::Rect::new(self.bat.position.0, self.bat.position.1 - 34.0, meter_width_bat, meter_height_bat);
             let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
             graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
-
+            
             //draw filled part
             let fill_rect = graphics::Rect::new(self.bat.position.0 + 1.0, self.bat.position.1 - 35.0, fill_width_bat, fill_height_bat);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
-
+        
         //for hero with arrow
         if self.draw_hero { 
             let hero_arrow_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
             let hero_knife_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1 + 15.0, self.hero.size.0, self.hero.size.1);
-
+            
             if self.hero_switch == false {
                 let hero_draw_param  = DrawParam::default().dest([hero_arrow_dist_rect.x, hero_arrow_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
                 graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
-
-
+                
+                
                 let radius = 80.0;
-
+                
                 if self.draw_shield == true {
                     let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
                     let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
                     graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
                 }
-
+                
                 if hero_arrow_dist_rect.overlaps(&self.bat_character) {
                     self.hero_arrow_bat_collision = true;
                 }
@@ -433,37 +470,41 @@ impl EventHandler <ggez::GameError> for PlayState {
             else {
                 let hero_draw_param  = DrawParam::default().dest([hero_knife_dist_rect.x, hero_knife_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
                 graphics::draw(ctx, &self.hero_character_knife, hero_draw_param)?;
-
+                
                 //range where knife attack succeds
                 let radius = 140.0;
                 let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 - 35.0 + (self.hero.size.1 / 2.0)));
                 let knife_range_mesh = Mesh::new_circle(ctx, graphics::DrawMode::stroke(5.0), circle_destn, radius, 2.0, Color::from_rgb(135, 206, 235)).unwrap();
                 graphics::draw(ctx, &knife_range_mesh, DrawParam::default()).unwrap();
-
+                
                 let corners = [
                     nalgebra::Point2::new(self.bat.position.0, self.bat.position.1),
                     nalgebra::Point2::new(self.bat.position.0, self.bat.position.1 + self.bat.size.1),
                     nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1),
                     nalgebra::Point2::new(self.bat.position.0 + self.bat.size.0, self.bat.position.1 + self.bat.size.1),
-                ];
-    
-                for corner in corners {
-                    let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
-                    if square_distance <= radius.powi(2) {
-                        self.bat_inside_range = true
+                    ];
+                    
+                    for corner in corners {
+                        let square_distance = (corner.x - circle_destn.x).powi(2) + (corner.y - circle_destn.y).powi(2);
+                        if square_distance <= radius.powi(2) {
+                            self.bat_inside_range = true
+                        }
                     }
-                }
             }
-
-
+                
+                
             if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
                 self.hero_arrow_bat_collision = true;
             }
-
             if hero_arrow_dist_rect.overlaps(&self.bat_character) || hero_knife_dist_rect.overlaps(&self.bat_character) {
-                self.hero_arrow_bat_collision = true;
+            self.hero_arrow_bat_collision = true;
+            }
+            if dinosaur_rect.overlaps(&hero_arrow_dist_rect) || dinosaur_rect.overlaps(&hero_knife_dist_rect) {
+                println!("overlapped dino hero");
+                self.dinosaur_hero_overlaps = true;
             }
         }
+
         graphics::present(ctx)?;
 
         Ok(())
