@@ -37,7 +37,6 @@ struct Dinosaur {
 
 impl Dinosaur{
     fn update_position(&mut self) {
-        println!("inside dinosaure update");
         self.current_position.0 -= 3.0;
         if self.current_position.0 < 0.0 {
             self.current_position = self.default_position;
@@ -320,31 +319,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
             }
         }
-        // if !self.dinosaur_hero_overlaps {
-        //     self.dinosaur.update_position();
-        // } else {
-        //     if !self.dinosaur_hero_overlaps {
-        //         self.dinosaur.update_position();
-        //     }
-        //     self.draw_hp_meter_hero = true;
-        //     let hp = self.hero.health_point.currrent;
-        //     let mut decrease_hp = 10.0;
-        //     if hp < decrease_hp {
-        //         decrease_hp = hp;
-        //     }
-
-        //     self.hero.health_point.currrent -= decrease_hp;
-        //     self.dinosaur_hero_overlaps = false;
-        //     self.dinosaur.current_position.0 += 40.0;
-
-        //     if self.hero.health_point.currrent == 0.0 {
-        //         self.draw_hero = false;
-        //         self.draw_bat = false;
-        //         self.draw_hp_meter_hero = false;
-        //         self.draw_hp_meter_bat = false;
-        //     }
-        // }
-
+        
         if self.ultimate_increase_health {
             let mut increase_hp = 15.0;
             let difference_hp = self.hero.health_point.max - self.hero.health_point.currrent;
@@ -353,7 +328,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
             self.hero.health_point.currrent += increase_hp;
             if self.hero.health_point.currrent == self.hero.health_point.max {
-                println!("current hp: {}", self.hero.health_point.currrent);
                 self.hero.health_point.currrent = self.hero.health_point.max - 15.0;
                 self.ultimate_increase_health = false;
             }
@@ -369,7 +343,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             if arrow.ongoing {
                 arrow.position.1 -= 20.5;
                 if self.arrow_overlap_bat && self.draw_bat && self.draw_hero{
-                    println!("overlaps");
                     self.draw_hp_meter_bat = true;
                     let current_bat_hp = self.bat.health_point.currrent;
                     let mut decrease_hp = 25.0;
@@ -559,7 +532,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             self.hero_arrow_bat_collision = true;
             }
             if dinosaur_rect.overlaps(&hero_arrow_dist_rect) || dinosaur_rect.overlaps(&hero_knife_dist_rect) {
-                println!("overlapped dino hero");
                 self.dinosaur_hero_overlaps = true;
             }
         }
@@ -645,7 +617,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
             KeyCode::F => {
                 self.ultimate_increase_health = true;
-                println!("ultimate");
             }
             KeyCode::LControl => {
                 //false for hero with arrows and vice versa
