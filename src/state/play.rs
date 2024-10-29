@@ -38,7 +38,7 @@ struct Dinosaur {
 impl Dinosaur{
     fn update_position(&mut self) {
         println!("inside dinosaure update");
-        self.current_position.0 -= 5.0;
+        self.current_position.0 -= 3.0;
         if self.current_position.0 < 0.0 {
             self.current_position = self.default_position;
         }
@@ -75,8 +75,8 @@ impl Bat {
         let xinc = dx / steps;
         let yinc = dy / steps;
 
-        self.position.0 += xinc * 2.5;
-        self.position.1 += yinc * 2.5;
+        self.position.0 += xinc * 2.0;
+        self.position.1 += yinc * 2.0;
 
         (self.position.0, self.position.1)
     }
@@ -122,6 +122,16 @@ impl Gravity for Hero {
         //840.0 position of hero in y
         if self.position.1 > DEFAULT_POS_HERO {
             self.position.1 = DEFAULT_POS_HERO;
+        }
+    }
+}
+
+impl Gravity for Dinosaur {
+    fn gravity(&mut self) {
+        self.current_position.1 += 6.0;
+        //840.0 position of hero in y
+        if self.current_position.1 > DEFAULT_POS_HERO {
+            self.current_position.1 = DEFAULT_POS_HERO;
         }
     }
 }
@@ -283,8 +293,57 @@ impl PlayState {
 impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
+        gravity_objects.push(&mut self.dinosaur);
         apply_gravity(&mut gravity_objects);
         self.dinosaur.update_position();
+        if self.dinosaur_hero_overlaps {
+            self.draw_hp_meter_hero = true;
+            let hp = self.hero.health_point.currrent;
+            let mut decrease_hp = 10.0;
+            if hp < decrease_hp {
+                decrease_hp = hp;
+            }
+
+            self.hero.health_point.currrent -= decrease_hp;
+            self.dinosaur_hero_overlaps = false;
+            if self.dinosaur.current_position.0 > self.hero.position.0 {
+                self.dinosaur.current_position.0 += 40.0;
+            } else {
+                self.dinosaur.current_position.1 -= 80.0;
+                self.dinosaur.current_position.0 += 100.0;
+            }
+
+            if self.hero.health_point.currrent == 0.0 {
+                self.draw_hero = false;
+                self.draw_bat = false;
+                self.draw_hp_meter_hero = false;
+                self.draw_hp_meter_bat = false;
+            }
+        }
+        // if !self.dinosaur_hero_overlaps {
+        //     self.dinosaur.update_position();
+        // } else {
+        //     if !self.dinosaur_hero_overlaps {
+        //         self.dinosaur.update_position();
+        //     }
+        //     self.draw_hp_meter_hero = true;
+        //     let hp = self.hero.health_point.currrent;
+        //     let mut decrease_hp = 10.0;
+        //     if hp < decrease_hp {
+        //         decrease_hp = hp;
+        //     }
+
+        //     self.hero.health_point.currrent -= decrease_hp;
+        //     self.dinosaur_hero_overlaps = false;
+        //     self.dinosaur.current_position.0 += 40.0;
+
+        //     if self.hero.health_point.currrent == 0.0 {
+        //         self.draw_hero = false;
+        //         self.draw_bat = false;
+        //         self.draw_hp_meter_hero = false;
+        //         self.draw_hp_meter_bat = false;
+        //     }
+        // }
 
         if self.ultimate_increase_health {
             let mut increase_hp = 15.0;
