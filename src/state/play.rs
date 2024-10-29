@@ -346,7 +346,7 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
             self.dinosaur_hero_overlaps = false;
             if self.dinosaur.current_position.0 > self.hero.position.0 {
-                self.dinosaur.current_position.0 += 80.0;
+                self.dinosaur.current_position.0 += 40.0;
             } else {
                 self.dinosaur.current_position.1 -= 80.0;
                 self.dinosaur.current_position.0 += 100.0;
@@ -558,6 +558,15 @@ impl EventHandler <ggez::GameError> for PlayState {
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
         
+        //shield for hero
+        let radius = 80.0;
+        
+        if self.draw_shield == true {
+            let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
+            let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
+            graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
+        }
+
         //for hero with arrow
         if self.draw_hero { 
             let hero_arrow_dist_rect = graphics::Rect::new(self.hero.position.0, self.hero.position.1, self.hero.size.0, self.hero.size.1);
@@ -568,13 +577,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                 graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
                 
                 
-                let radius = 80.0;
-                
-                if self.draw_shield == true {
-                    let circle_destn = convert_glam_to_point(glam::vec2(self.hero.position.0 + (self.hero.size.0 / 2.0), self.hero.position.1 + (self.hero.size.1 / 2.0)));
-                    let circle = Mesh::new_circle(ctx, graphics::DrawMode::fill(), circle_destn, radius, 1.0, Color::from_rgba(135, 206, 235, 120)).unwrap();
-                    graphics::draw(ctx, &circle, DrawParam::default()).unwrap();
-                }
                 
                 if hero_arrow_dist_rect.overlaps(&self.bat_character) {
                     self.hero_arrow_bat_collision = true;
