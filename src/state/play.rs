@@ -120,8 +120,8 @@ impl Bat {
         let xinc = dx / steps;
         let yinc = dy / steps;
 
-        self.position.0 += xinc * 0.0;
-        self.position.1 += yinc * 0.0;
+        self.position.0 += xinc * 2.0;
+        self.position.1 += yinc * 2.0;
 
         (self.position.0, self.position.1)
     }
@@ -162,6 +162,17 @@ impl HealthMeter for Dinosaur {
         let health_percent = self.health_point.currrent / self.health_point.max;
         let meter_width = 90.0;
         let meter_height = 20.0;
+        let fill_width = health_percent * meter_width;
+        let fill_height = meter_height - 5.0;
+        (fill_width, fill_height)
+    }
+}
+
+impl HealthMeter for Spider {
+    fn health_meter(&self) -> (f32, f32) {
+        let health_percent = self.health_point.currrent / self.health_point.max;
+        let meter_width = 80.0;
+        let meter_height = 18.0;
         let fill_width = health_percent * meter_width;
         let fill_height = meter_height - 5.0;
         (fill_width, fill_height)
@@ -253,6 +264,7 @@ pub struct PlayState {
     hero_inside_net: bool,
     last_draw_time_spider: Instant,
     hero_arrow_spider_collision: bool,
+    draw_hp_meter_spider: bool,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -349,6 +361,7 @@ impl PlayState {
         let draw_spider_net = false;
         let hero_inside_net = false;
         let hero_arrow_spider_collision = false;
+        let draw_hp_meter_spider = false;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -401,6 +414,7 @@ impl PlayState {
             last_draw_time_spider,
             hero_inside_net,
             hero_arrow_spider_collision,
+            draw_hp_meter_spider,
         })
     }
 }
@@ -420,7 +434,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         self.spider_rect.x = self.spider.update_position();
         //dinosaur attacking hero
-        // (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
+        (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
 
         if self.dinosaur_hero_overlaps && self.draw_dino && self.draw_hero{
             self.draw_hp_meter_hero = true;
@@ -505,6 +519,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 }
                 
                 if self.hero_arrow_spider_collision {
+                    self.draw_hp_meter_spider = true;
                     let mut decrease_hp = 25.0;
                     let current_hp = self.spider.health_point.currrent;
                     if current_hp < decrease_hp {
@@ -515,6 +530,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                     if self.spider.health_point.currrent == 0.0 {
                         (self.spider_rect.x, self.spider_rect.y) = get_random_position();
                         self.spider.health_point.currrent = self.spider.health_point.max;
+                        self.draw_hp_meter_spider = false;
                     }
                     self.hero_arrow_spider_collision = false;
                     arrow.ongoing = false;
@@ -680,6 +696,23 @@ impl EventHandler <ggez::GameError> for PlayState {
             
             // Draw the filled part of the health meter
             let fill_rect = graphics::Rect::new(self.dinosaur.current_position.0 + 10.0, self.dinosaur.current_position.1 + 136.0, fill_width_dino, fill_height_dino);
+            let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
+            graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
+        }
+
+        //spider hp meter
+        if self.draw_hp_meter_spider {
+            let (fill_width_spider, fill_height_spider) = get_health_meter_dimension(&self.spider);
+            let meter_width_spider = 100.0;
+            let meter_height_spider = 20.0;
+            
+            // Draw the background of the health meter
+            let background_rect = graphics::Rect::new(self.spider.position.0 + 5.0, self.spider.position.1 + 134.0, meter_width_spider, meter_height_spider);
+            let background_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), background_rect, graphics::Color::from_rgb(128, 128, 128))?;
+            graphics::draw(ctx, &background_mesh, graphics::DrawParam::default())?;
+            
+            // Draw the filled part of the health meter
+            let fill_rect = graphics::Rect::new(self.spider.position.0 + 10.0, self.spider.position.1 + 136.0, fill_width_spider, fill_height_spider);
             let fill_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), fill_rect, graphics::Color::from_rgb(144, 238, 144))?;
             graphics::draw(ctx, &fill_mesh, graphics::DrawParam::default())?;
         }
