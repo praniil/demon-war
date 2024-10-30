@@ -5,6 +5,7 @@ use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect
 use glam::Vec2;
 use core::time;
 use std::thread::current;
+use std::{thread};
 use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
@@ -228,6 +229,9 @@ pub struct PlayState {
     spider_net_rect: Rect,
     spider_img: Image,
     spider_net_img: Image,
+    draw_spider: bool,
+    draw_spider_net: bool,
+    last_draw_time_spider: Instant,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -244,6 +248,7 @@ impl PlayState {
         let dinosaur_image = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/dinosaur.png");
         let spider_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider.png");
         let spider_net_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider net.png");
+        let last_draw_time_spider = Instant::now();
 
         let dinosaur = Dinosaur {
             default_position: (1820.0, 880.0),
@@ -321,6 +326,8 @@ impl PlayState {
         let dino_rect = graphics::Rect::new(dinosaur.current_position.0, dinosaur.current_position.1, dinosaur.size.0, dinosaur.size.1);
         let use_knife_dino= false;
         let draw_dino = true;
+        let draw_spider= true;
+        let draw_spider_net = false;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -368,6 +375,9 @@ impl PlayState {
             spider_net_rect,
             spider_img,
             spider_net_img,
+            draw_spider,
+            draw_spider_net,
+            last_draw_time_spider,
         })
     }
 }
@@ -376,7 +386,14 @@ impl EventHandler <ggez::GameError> for PlayState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         let mut gravity_objects: Vec<&mut dyn Gravity> = vec![&mut self.hero];
         gravity_objects.push(&mut self.dinosaur);
+        if self.draw_spider_net {
+            gravity_objects.push(&mut self.spider_net);
+        }
         apply_gravity(&mut gravity_objects);
+
+        //mapping the position of spider_net_Rect and spider net
+        self.spider_net_rect.x = self.spider_net.position.0;
+        self.spider_net_rect.y = self.spider_net.position.1;
 
         //dinosaur attacking hero
         (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
@@ -405,6 +422,16 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
                 self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
+            }
+        }
+
+        // spider net throwing
+        if self.draw_spider{
+            // println!("inside this");
+            if self.last_draw_time_spider.elapsed() > time::Duration::new(5, 0) {
+                println!("inside the current itmt elapsed");
+                self.draw_spider_net = true;
+                self.last_draw_time_spider= Instant::now();
             }
         }
         
@@ -541,14 +568,19 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         //spider
-        let spider_rect = self.spider_rect;
-        let spider_draw_param = DrawParam::default().dest([spider_rect.x, spider_rect.y]).scale([self.spider.size.0 / self.spider_img.width() as f32, self.spider.size.1 / self.spider_img.height() as f32]);
-        graphics::draw(ctx, &self.spider_img, spider_draw_param).unwrap();
+        if self.draw_spider{
+            let spider_rect = self.spider_rect;
+            let spider_draw_param = DrawParam::default().dest([spider_rect.x, spider_rect.y]).scale([self.spider.size.0 / self.spider_img.width() as f32, self.spider.size.1 / self.spider_img.height() as f32]);
+            graphics::draw(ctx, &self.spider_img, spider_draw_param).unwrap();
+        }
 
         // spider net
-        let spider_net_rect = self.spider_net_rect;
-        let spider_net_draw_param = DrawParam::default().dest([spider_net_rect.x, spider_net_rect.y]).scale([self.spider_net.size.0 / self.spider_net_img.width() as f32, self.spider_net.size.1 / self.spider_net_img.height() as f32]);
-        graphics::draw(ctx, &self.spider_net_img, spider_net_draw_param).unwrap();
+        if self.draw_spider_net {
+            println!("inside here");
+            let spider_net_rect = self.spider_net_rect;
+            let spider_net_draw_param = DrawParam::default().dest([spider_net_rect.x, spider_net_rect.y]).scale([self.spider_net.size.0 / self.spider_net_img.width() as f32, self.spider_net.size.1 / self.spider_net_img.height() as f32]);
+            graphics::draw(ctx, &self.spider_net_img, spider_net_draw_param).unwrap();
+        }
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         if self.draw_bat  {
