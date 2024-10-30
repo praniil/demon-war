@@ -30,6 +30,26 @@ struct Hero {
     health_point: HpMeter,
 }
 
+struct SpiderNet {
+    size: (f32, f32),
+    position: (f32, f32),
+}
+struct Spider {
+    size: (f32, f32),
+    position: (f32, f32),
+    health_point: HpMeter,
+}
+
+impl Gravity for SpiderNet{
+    fn gravity(&mut self) {
+        self.position.1 += 6.0;
+        //840.0 position of hero in y
+        if self.position.1 > DEFAULT_POS_HERO {
+            self.position.1 = DEFAULT_POS_HERO;
+        }
+    }
+}
+
 struct Dinosaur {
     size : (f32, f32),
     default_position: (f32, f32),
@@ -202,6 +222,12 @@ pub struct PlayState {
     dino_inside_range: bool,
     use_knife_dino: bool,
     draw_dino: bool,
+    spider: Spider,
+    spider_net: SpiderNet,
+    spider_rect: Rect,
+    spider_net_rect: Rect,
+    spider_img: Image,
+    spider_net_img: Image,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -216,6 +242,8 @@ impl PlayState {
         let hero_character_arrows = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/copy_hero.png");
         let hero_character_knife = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/hero_knife.png");
         let dinosaur_image = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/dinosaur.png");
+        let spider_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider.png");
+        let spider_net_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider net.png");
 
         let dinosaur = Dinosaur {
             default_position: (1820.0, 880.0),
@@ -243,6 +271,19 @@ impl PlayState {
             // health_point: 50,
         };
 
+        let spider = Spider {
+            size: (80.0, 80.0),
+            position: get_random_position(),
+            health_point: HpMeter { max: 50.0, currrent: 50.0 },
+        };
+        
+        let spider_net = SpiderNet {
+            size: (100.0, 130.0),
+            position: (spider.position.0 - 5.0 , spider.position.1 + spider.size.1 + 20.0 )
+        };
+        
+        let spider_rect = graphics::Rect::new(spider.position.0, spider.position.1, spider.size.0, spider.size.1);
+        let spider_net_rect = graphics::Rect::new(spider_net.position.0, spider_net.position.1, spider_net.size.0, spider_net.size.1);
         
         let shield_ability_position= (11.0, 11.0);
         let shiled_ability_cooldown_position = (18.0, 18.0);
@@ -321,6 +362,12 @@ impl PlayState {
             dino_rect,
             use_knife_dino,
             draw_dino,
+            spider,
+            spider_net,
+            spider_rect,
+            spider_net_rect,
+            spider_img,
+            spider_net_img,
         })
     }
 }
@@ -480,7 +527,7 @@ impl EventHandler <ggez::GameError> for PlayState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, Color::from_rgb(211, 211, 211));
+        graphics::clear(ctx, Color::from_rgb(240, 240, 240));
         //outside self.hero.swith == false so that the arrow goes on moving up when hero is switched with knife from arrows
         for arrow in &self.arrows {
             if arrow.ongoing == true {
@@ -492,6 +539,16 @@ impl EventHandler <ggez::GameError> for PlayState {
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
+
+        //spider
+        let spider_rect = self.spider_rect;
+        let spider_draw_param = DrawParam::default().dest([spider_rect.x, spider_rect.y]).scale([self.spider.size.0 / self.spider_img.width() as f32, self.spider.size.1 / self.spider_img.height() as f32]);
+        graphics::draw(ctx, &self.spider_img, spider_draw_param).unwrap();
+
+        // spider net
+        let spider_net_rect = self.spider_net_rect;
+        let spider_net_draw_param = DrawParam::default().dest([spider_net_rect.x, spider_net_rect.y]).scale([self.spider_net.size.0 / self.spider_net_img.width() as f32, self.spider_net.size.1 / self.spider_net_img.height() as f32]);
+        graphics::draw(ctx, &self.spider_net_img, spider_net_draw_param).unwrap();
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         if self.draw_bat  {
