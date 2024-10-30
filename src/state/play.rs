@@ -78,7 +78,6 @@ impl Dinosaur{
 struct Bat {
     size: (f32, f32),
     position: (f32, f32),
-    // health_point : u32,
     health_point: HpMeter,
 }
 
@@ -98,9 +97,6 @@ impl Bat {
 
         let xinc = dx / steps;
         let yinc = dy / steps;
-
-        // self.position.0 += xinc * 0.0;
-        // self.position.1 += yinc * 0.0;
 
         self.position.0 += xinc * 2.0;
         self.position.1 += yinc * 2.0;
@@ -266,16 +262,13 @@ impl PlayState {
             size: (95.0, 120.0),
             position: (1920.0 / 2.0, 840.0),
             health_point: HpMeter { max: 150.0, currrent: 150.0 },
-            // health_point: 150,
         };
 
         let bat_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/bat.png");
         let bat = Bat {
             size: (80.0, 80.0),
             position: get_random_position(),
-            // position: (90.0, 90.0),
             health_point: HpMeter { max:50.0, currrent: 50.0 },
-            // health_point: 50,
         };
 
         let spider = Spider {
@@ -427,6 +420,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
                 self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
+                self.draw_shield = false;
             }
         }
 
@@ -516,7 +510,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
             self.dinosaur.health_point.currrent -= decrease_hp;
             if self.dinosaur.health_point.currrent == 0.0 {
-                // self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
                 self.dinosaur.current_position = self.dinosaur.default_position;
                 self.dinosaur.health_point.currrent = self.dinosaur.health_point.max;
@@ -552,6 +545,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_hp_meter_bat = false;
                 self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
+                self.draw_shield = false;
             }
         }
 
@@ -717,10 +711,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             let hero_knife_insider_rect =  hero_knife_dist_rect.x >= self.spider_net_rect.x && hero_knife_dist_rect.y >= self.spider_net_rect.y && (hero_knife_dist_rect.x + hero_knife_dist_rect.w) <= (self.spider_net_rect.x + self.spider_net_rect.w) && 
             (hero_knife_dist_rect.y + hero_knife_dist_rect.h) <= (self.spider_net_rect.y + self.spider_net_rect.h);
 
-            // if self.spider_net_rect.overlaps(&hero_arrow_dist_rect) || self.spider_net_rect.overlaps(&hero_knife_dist_rect) {
-            //     self.hero_inside_net = true;
-            // }
-
             if hero_arrow_inside_net || hero_knife_insider_rect {
                 self.hero_inside_net = true;
             }
@@ -820,29 +810,33 @@ impl EventHandler <ggez::GameError> for PlayState {
                             self.hero.position.1 = DEFAULT_POS_HERO;
                         }
                     }
+                    _ => {}
+                }
+            } 
+            match keycode {
                     KeyCode::Q => {
                         self.draw_shield = true;
                         self.shield_start_time = Some(Instant::now());
                     }
                     KeyCode::E => {
                     self.teleport = true;
-                }
-                KeyCode::F => {
-                    self.ultimate_increase_health = true;
-                }
-                KeyCode::LControl => {
-                    //false for hero with arrows and vice versa
-                    if self.hero_switch == false {
-                        self.hero_switch = true;
-                    } else {
-                        self.hero_switch = false;
                     }
-                }
-                _ => {}
+                    KeyCode::F => {
+                        self.ultimate_increase_health = true;
+                    }
+                    KeyCode::LControl => {
+                        //false for hero with arrows and vice versa
+                        if self.hero_switch == false {
+                            self.hero_switch = true;
+                        } else {
+                            self.hero_switch = false;
+                        }
+                    }
+                    _ => {}
             }
         }
     }
-}
+
 
 fn load_image(ctx: &mut Context, file_path: &str) -> graphics::Image {
     let image_bytes = fs::read(file_path).unwrap();
