@@ -35,6 +35,7 @@ struct SpiderNet {
     size: (f32, f32),
     position: (f32, f32),
 }
+
 struct Spider {
     size: (f32, f32),
     position: (f32, f32),
@@ -98,11 +99,11 @@ impl Bat {
         let xinc = dx / steps;
         let yinc = dy / steps;
 
-        self.position.0 += xinc * 2.0;
-        self.position.1 += yinc * 2.0;
-
         // self.position.0 += xinc * 0.0;
         // self.position.1 += yinc * 0.0;
+
+        self.position.0 += xinc * 2.0;
+        self.position.1 += yinc * 2.0;
 
         (self.position.0, self.position.1)
     }
@@ -231,13 +232,14 @@ pub struct PlayState {
     spider_net_img: Image,
     draw_spider: bool,
     draw_spider_net: bool,
+    hero_inside_net: bool,
     last_draw_time_spider: Instant,
 }
 
 fn get_random_position() -> (f32, f32){
     let mut rng = rand::thread_rng();
     let random_x: f32 = rng.gen_range(40.0..1800.0);
-    let random_y: f32 = rng.gen_range(40.0..800.0);
+    let random_y: f32 = rng.gen_range(40.0..400.0);
     (random_x, random_y)
 }
 
@@ -283,7 +285,7 @@ impl PlayState {
         };
         
         let spider_net = SpiderNet {
-            size: (100.0, 130.0),
+            size: (200.0, 150.0),
             position: (spider.position.0 - 5.0 , spider.position.1 + spider.size.1 + 20.0 )
         };
         
@@ -328,6 +330,7 @@ impl PlayState {
         let draw_dino = true;
         let draw_spider= true;
         let draw_spider_net = false;
+        let hero_inside_net = false;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -378,6 +381,7 @@ impl PlayState {
             draw_spider,
             draw_spider_net,
             last_draw_time_spider,
+            hero_inside_net,
         })
     }
 }
@@ -397,6 +401,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         //dinosaur attacking hero
         (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
+
         if self.dinosaur_hero_overlaps && self.draw_dino && self.draw_hero{
             self.draw_hp_meter_hero = true;
             self.draw_hp_meter_dinosaur = true;
@@ -427,12 +432,12 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         // spider net throwing
         if self.draw_spider{
-            // println!("inside this");
-            if self.last_draw_time_spider.elapsed() > time::Duration::new(5, 0) {
-                println!("inside the current itmt elapsed");
+            if self.last_draw_time_spider.elapsed() > time::Duration::new(4, 0) {
+                self.spider_net.position = (self.spider.position.0 - 15.0, self.spider.position.1 + self.spider.size.1 + 20.0);
                 self.draw_spider_net = true;
                 self.last_draw_time_spider= Instant::now();
             }
+            self.hero_inside_net = false;
         }
         
         if self.ultimate_increase_health {
@@ -565,21 +570,6 @@ impl EventHandler <ggez::GameError> for PlayState {
                 }
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
-        }
-
-        //spider
-        if self.draw_spider{
-            let spider_rect = self.spider_rect;
-            let spider_draw_param = DrawParam::default().dest([spider_rect.x, spider_rect.y]).scale([self.spider.size.0 / self.spider_img.width() as f32, self.spider.size.1 / self.spider_img.height() as f32]);
-            graphics::draw(ctx, &self.spider_img, spider_draw_param).unwrap();
-        }
-
-        // spider net
-        if self.draw_spider_net {
-            println!("inside here");
-            let spider_net_rect = self.spider_net_rect;
-            let spider_net_draw_param = DrawParam::default().dest([spider_net_rect.x, spider_net_rect.y]).scale([self.spider_net.size.0 / self.spider_net_img.width() as f32, self.spider_net.size.1 / self.spider_net_img.height() as f32]);
-            graphics::draw(ctx, &self.spider_net_img, spider_net_draw_param).unwrap();
         }
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
@@ -721,6 +711,33 @@ impl EventHandler <ggez::GameError> for PlayState {
             if self.dino_rect.overlaps(&hero_arrow_dist_rect) || self.dino_rect.overlaps(&hero_knife_dist_rect) {
                 self.dinosaur_hero_overlaps = true;
             }
+
+            let hero_arrow_inside_net =  hero_arrow_dist_rect.x >= self.spider_net_rect.x && hero_arrow_dist_rect.y >= self.spider_net_rect.y && (hero_arrow_dist_rect.x + hero_arrow_dist_rect.w) <= (self.spider_net_rect.x + self.spider_net_rect.w) && 
+            (hero_arrow_dist_rect.y + hero_arrow_dist_rect.h) <= (self.spider_net_rect.y + self.spider_net_rect.h);
+            let hero_knife_insider_rect =  hero_knife_dist_rect.x >= self.spider_net_rect.x && hero_knife_dist_rect.y >= self.spider_net_rect.y && (hero_knife_dist_rect.x + hero_knife_dist_rect.w) <= (self.spider_net_rect.x + self.spider_net_rect.w) && 
+            (hero_knife_dist_rect.y + hero_knife_dist_rect.h) <= (self.spider_net_rect.y + self.spider_net_rect.h);
+
+            // if self.spider_net_rect.overlaps(&hero_arrow_dist_rect) || self.spider_net_rect.overlaps(&hero_knife_dist_rect) {
+            //     self.hero_inside_net = true;
+            // }
+
+            if hero_arrow_inside_net || hero_knife_insider_rect {
+                self.hero_inside_net = true;
+            }
+        }
+
+        //spider
+        if self.draw_spider{
+            let spider_rect = self.spider_rect;
+            let spider_draw_param = DrawParam::default().dest([spider_rect.x, spider_rect.y]).scale([self.spider.size.0 / self.spider_img.width() as f32, self.spider.size.1 / self.spider_img.height() as f32]);
+            graphics::draw(ctx, &self.spider_img, spider_draw_param).unwrap();
+        }
+
+        // spider net
+        if self.draw_spider_net {
+            let spider_net_rect = self.spider_net_rect;
+            let spider_net_draw_param = DrawParam::default().dest([spider_net_rect.x, spider_net_rect.y]).scale([self.spider_net.size.0 / self.spider_net_img.width() as f32, self.spider_net.size.1 / self.spider_net_img.height() as f32]);
+            graphics::draw(ctx, &self.spider_net_img, spider_net_draw_param).unwrap();
         }
 
         graphics::present(ctx)?;
@@ -777,50 +794,52 @@ impl EventHandler <ggez::GameError> for PlayState {
             _keymods: KeyMods,
             _repeat: bool,
         ) {
-            match keycode {
-                KeyCode:: A => {
-                    self.hero.position.0 -= 80.0;
-                    if self.hero.position.0 < 0.0 {
-                        self.hero.position.0 = 0.0;
+            if !self.hero_inside_net {
+                match keycode {
+                    KeyCode:: A => {
+                        self.hero.position.0 -= 80.0;
+                        if self.hero.position.0 < 0.0 {
+                            self.hero.position.0 = 0.0;
+                        }
+                    }
+                    KeyCode :: W => {
+                        self.hero.position.1 -= 200.0;
+                        if self.hero.position.1 < 0.0 {
+                            self.hero.position.1 = 0.0;
+                        }
+                    }
+                    KeyCode::D => {
+                        self.hero.position.0 += 80.0;
+                        if self.hero.position.0 > 1920.0 - self.hero.size.0 {
+                            self.hero.position.0 = 1920.0 - self.hero.size.0;
+                        }
+                    }
+                    KeyCode::S => {
+                        self.hero.position.1 += 80.0;
+                        if self.hero.position.1 > DEFAULT_POS_HERO {
+                            self.hero.position.1 = DEFAULT_POS_HERO;
+                        }
+                    }
+                    KeyCode::Q => {
+                        self.draw_shield = true;
+                        self.shield_start_time = Some(Instant::now());
+                    }
+                    KeyCode::E => {
+                    self.teleport = true;
+                }
+                KeyCode::F => {
+                    self.ultimate_increase_health = true;
+                }
+                KeyCode::LControl => {
+                    //false for hero with arrows and vice versa
+                    if self.hero_switch == false {
+                        self.hero_switch = true;
+                    } else {
+                        self.hero_switch = false;
                     }
                 }
-                KeyCode :: W => {
-                    self.hero.position.1 -= 200.0;
-                    if self.hero.position.1 < 0.0 {
-                        self.hero.position.1 = 0.0;
-                    }
-                }
-                KeyCode::D => {
-                    self.hero.position.0 += 80.0;
-                    if self.hero.position.0 > 1920.0 - self.hero.size.0 {
-                        self.hero.position.0 = 1920.0 - self.hero.size.0;
-                    }
-                }
-                KeyCode::S => {
-                    self.hero.position.1 += 80.0;
-                    if self.hero.position.1 > DEFAULT_POS_HERO {
-                        self.hero.position.1 = DEFAULT_POS_HERO;
-                    }
-                }
-                KeyCode::Q => {
-                    self.draw_shield = true;
-                    self.shield_start_time = Some(Instant::now());
-                }
-                KeyCode::E => {
-                self.teleport = true;
+                _ => {}
             }
-            KeyCode::F => {
-                self.ultimate_increase_health = true;
-            }
-            KeyCode::LControl => {
-                //false for hero with arrows and vice versa
-                if self.hero_switch == false {
-                    self.hero_switch = true;
-                } else {
-                    self.hero_switch = false;
-                }
-            }
-            _ => {}
         }
     }
 }
@@ -830,6 +849,7 @@ fn load_image(ctx: &mut Context, file_path: &str) -> graphics::Image {
     let image = graphics::Image::from_bytes(ctx, &image_bytes).unwrap();
     image
 }
+
     
 
 
