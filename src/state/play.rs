@@ -120,8 +120,8 @@ impl Bat {
         let xinc = dx / steps;
         let yinc = dy / steps;
 
-        self.position.0 += xinc * 2.0;
-        self.position.1 += yinc * 2.0;
+        self.position.0 += xinc * 0.0;
+        self.position.1 += yinc * 0.0;
 
         (self.position.0, self.position.1)
     }
@@ -252,12 +252,13 @@ pub struct PlayState {
     draw_spider_net: bool,
     hero_inside_net: bool,
     last_draw_time_spider: Instant,
+    hero_arrow_spider_collision: bool,
 }
 
 fn get_random_position() -> (f32, f32){
     let mut rng = rand::thread_rng();
     let random_x: f32 = rng.gen_range(40.0..1800.0);
-    let random_y: f32 = rng.gen_range(40.0..400.0);
+    let random_y: f32 = rng.gen_range(40.0..600.0);
     (random_x, random_y)
 }
 
@@ -347,6 +348,7 @@ impl PlayState {
         let draw_spider= true;
         let draw_spider_net = false;
         let hero_inside_net = false;
+        let hero_arrow_spider_collision = false;
         
         Ok(PlayState{
             hero_character_arrows,
@@ -398,6 +400,7 @@ impl PlayState {
             draw_spider_net,
             last_draw_time_spider,
             hero_inside_net,
+            hero_arrow_spider_collision,
         })
     }
 }
@@ -417,7 +420,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         self.spider_rect.x = self.spider.update_position();
         //dinosaur attacking hero
-        (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
+        // (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
 
         if self.dinosaur_hero_overlaps && self.draw_dino && self.draw_hero{
             self.draw_hp_meter_hero = true;
@@ -473,11 +476,13 @@ impl EventHandler <ggez::GameError> for PlayState {
             }
         }
 
+
         //for hero with arrows
         if self.draw_hero {
             (self.bat.position.0, self.bat.position.1) = self.bat.update_bat_position(self.hero.position.0, self.hero.position.1);
             self.bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         }
+
 
         for arrow in &mut self.arrows {
             if arrow.ongoing {
@@ -498,6 +503,23 @@ impl EventHandler <ggez::GameError> for PlayState {
                     self.arrow_overlap_bat = false;
                     arrow.ongoing = false; 
                 }
+                
+                if self.hero_arrow_spider_collision {
+                    let mut decrease_hp = 25.0;
+                    let current_hp = self.spider.health_point.currrent;
+                    if current_hp < decrease_hp {
+                        decrease_hp = current_hp;
+                    }
+                    println!("current spider health: {}", self.spider.health_point.currrent);
+                    self.spider.health_point.currrent -= decrease_hp;
+                    if self.spider.health_point.currrent == 0.0 {
+                        (self.spider_rect.x, self.spider_rect.y) = get_random_position();
+                        self.spider.health_point.currrent = self.spider.health_point.max;
+                    }
+                    self.hero_arrow_spider_collision = false;
+                    arrow.ongoing = false;
+                }
+
                 if arrow.position.1 < 0.0 {
                     arrow.ongoing = false; 
                 }
@@ -590,6 +612,9 @@ impl EventHandler <ggez::GameError> for PlayState {
                 if arrow.overlaps(&self.bat_character) {
                     self.arrow_overlap_bat = true;
                 }
+                if arrow.overlaps(&self.spider_rect) {
+                    self.hero_arrow_spider_collision = true;
+                }
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
@@ -676,8 +701,6 @@ impl EventHandler <ggez::GameError> for PlayState {
             if self.hero_switch == false {
                 let hero_draw_param  = DrawParam::default().dest([hero_arrow_dist_rect.x, hero_arrow_dist_rect.y]).scale([self.hero.size.0 / self.hero_character_arrows.width() as f32 , self.hero.size.1/ self.hero_character_arrows.height() as f32]);
                 graphics::draw(ctx, &self.hero_character_arrows, hero_draw_param)?;
-                
-                
                 
                 if hero_arrow_dist_rect.overlaps(&self.bat_character) {
                     self.hero_arrow_bat_collision = true;
@@ -854,7 +877,7 @@ impl EventHandler <ggez::GameError> for PlayState {
                     }
                     KeyCode::LControl => {
                         //false for hero with arrows and vice versa
-                        if self.hero_switch == false {
+                        if !self.hero_switch {
                             self.hero_switch = true;
                         } else {
                             self.hero_switch = false;
