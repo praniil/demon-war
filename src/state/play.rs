@@ -39,7 +39,29 @@ struct SpiderNet {
 struct Spider {
     size: (f32, f32),
     position: (f32, f32),
+    moving_left: bool,
     health_point: HpMeter,
+}
+
+impl Spider {
+    fn update_position(&mut self) ->  f32 {
+        if self.moving_left {
+            self.position.0 -= 5.0;
+            if self.position.0 <= 0.0 + self.size.0 * 3.0 {
+                self.position.0 += 5.0;
+                self.moving_left = false;
+            } 
+        }
+        if !self.moving_left {
+            self.position.0 += 5.0;
+            if self.position.0 >= 1920.0 - self.size.0 * 3.0{
+                self.position.0 -= 5.0;
+                self.moving_left = true;
+            }
+        }
+        
+        self.position.0
+    }
 }
 
 impl Gravity for SpiderNet{
@@ -274,6 +296,7 @@ impl PlayState {
         let spider = Spider {
             size: (80.0, 80.0),
             position: get_random_position(),
+            moving_left: true,
             health_point: HpMeter { max: 50.0, currrent: 50.0 },
         };
         
@@ -392,6 +415,7 @@ impl EventHandler <ggez::GameError> for PlayState {
         self.spider_net_rect.x = self.spider_net.position.0;
         self.spider_net_rect.y = self.spider_net.position.1;
 
+        self.spider_rect.x = self.spider.update_position();
         //dinosaur attacking hero
         (self.dino_rect.x, self.dino_rect.y) = self.dinosaur.update_position();
 
@@ -421,6 +445,8 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
                 self.draw_shield = false;
+                self.draw_spider = false;
+                self.draw_spider_net = false;
             }
         }
 
@@ -455,7 +481,7 @@ impl EventHandler <ggez::GameError> for PlayState {
 
         for arrow in &mut self.arrows {
             if arrow.ongoing {
-                arrow.position.1 -= 20.5;
+                arrow.position.1 -= 15.5;
                 if self.arrow_overlap_bat && self.draw_bat && self.draw_hero{
                     self.draw_hp_meter_bat = true;
                     let current_bat_hp = self.bat.health_point.currrent;
@@ -546,6 +572,8 @@ impl EventHandler <ggez::GameError> for PlayState {
                 self.draw_dino = false;
                 self.draw_hp_meter_dinosaur = false;
                 self.draw_shield = false;
+                self.draw_spider = false;
+                self.draw_spider_net = false;
             }
         }
 
