@@ -103,6 +103,10 @@ struct Bat {
     health_point: HpMeter,
 }
 
+struct AbilitiesIcon {
+    size: (f32, f32),
+}
+
 impl Bat {
     //dda algorithm to track the hero 
     fn update_bat_position(&mut self, hero_pos_x: f32, hero_pos_y: f32) -> (f32, f32) {
@@ -214,23 +218,20 @@ fn convert_glam_to_point(vec: Vec2) -> Point2<f32> {
 }
 
 pub struct PlayState {
-    hero_arrow_dist_rect: Rect,
-    hero_knife_dist_rect: Rect,
-    arrow_rect: Rect,
+    // hero_arrow_dist_rect: Rect,
+    // hero_knife_dist_rect: Rect,
+    // arrow_rect: Rect,
+    ability_icon: AbilitiesIcon,
     dino_rect: Rect,
     bat_character: Rect,
     hero_character_arrows: Image,
     hero_character_knife: Image,
     bat_img : Image,
     dinosaur_image: Image,
+    shield_img: Image,
+    teleport_img: Image,
+    ultimate_img: Image,
     dinosaur: Dinosaur,
-    shield_ability_position: (f32, f32),
-    shiled_ability_cooldown_position: (f32, f32),
-    teleport_ability_position: (f32, f32),
-    teleport_ability_cooldown_position: (f32, f32),
-    ultimate_ability_position: (f32, f32),
-    ultimate_ability_cooldown_position: (f32, f32),
-    draw_arrow: bool,
     hero: Hero,
     bat: Bat,
     arrows: Vec<Arrow>,
@@ -239,7 +240,6 @@ pub struct PlayState {
     teleport: bool,
     hero_switch: bool,
     hero_arrow_bat_collision: bool,
-    hero_knife_bat_collision: bool,
     draw_hero: bool,
     draw_bat: bool,
     draw_hp_meter_hero: bool,
@@ -281,7 +281,14 @@ impl PlayState {
         let dinosaur_image = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/dinosaur.png");
         let spider_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider.png");
         let spider_net_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/spider net.png");
+        let shield_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/shield_800.png");
+        let teleport_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/teleport.png");
+        let ultimate_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/heal_ulti.png");
         let last_draw_time_spider = Instant::now();
+
+        let ability_icon = AbilitiesIcon {
+            size: (70.0, 70.0),
+        };
 
         let dinosaur = Dinosaur {
             default_position: (1820.0, 880.0),
@@ -320,34 +327,25 @@ impl PlayState {
         
         let spider_rect = graphics::Rect::new(spider.position.0, spider.position.1, spider.size.0, spider.size.1);
         let spider_net_rect = graphics::Rect::new(spider_net.position.0, spider_net.position.1, spider_net.size.0, spider_net.size.1);
-        
-        let shield_ability_position= (11.0, 11.0);
-        let shiled_ability_cooldown_position = (18.0, 18.0);
-        let teleport_ability_position= (31.0, 31.0);
-        let teleport_ability_cooldown_position= (41.0, 41.0);
-        let ultimate_ability_position= (51.0, 51.0);
-        let ultimate_ability_cooldown_position= (61.0, 61.0);
-        let draw_arrow = false;
         let arrow = Arrow {
             position : (hero.position.0 - 47.0 + hero.size.0 / 2.0, hero.position.1),
             ongoing : false
         };
-        let arrow_rect = graphics::Rect::new(arrow.position.0 - 2.0 + hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 60.0);
+        // let arrow_rect = graphics::Rect::new(arrow.position.0 - 2.0 + hero.size.0 / 2.0, arrow.position.1 - 44.0, 2.0, 60.0);
         let arrows = vec![arrow];
         let draw_shield = false;
         let shield_start_time = None;
         let teleport = false;
         let hero_switch = false;
         let hero_arrow_bat_collision = false;
-        let hero_knife_bat_collision = false;
         let draw_hero = true;
         let draw_bat = true;
         let draw_hp_meter_hero = false;
         let draw_hp_meter_bat = false;
         let draw_hp_meter_dinosaur = false;
         let bat_inside_range= false;
-        let hero_arrow_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1, hero.size.0, hero.size.1);
-        let hero_knife_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1 + 15.0, hero.size.0, hero.size.1);
+        // let hero_arrow_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1, hero.size.0, hero.size.1);
+        // let hero_knife_dist_rect = graphics::Rect::new(hero.position.0, hero.position.1 + 15.0, hero.size.0, hero.size.1);
         let use_knife = false;
         let bat_character = graphics::Rect::new(bat.position.0, bat.position.1, bat.size.0, bat.size.1);
         let arrow_overlap_bat = false;
@@ -370,13 +368,6 @@ impl PlayState {
             bat_img,
             dinosaur_image,
             dinosaur,
-            shield_ability_position, 
-            shiled_ability_cooldown_position, 
-            teleport_ability_cooldown_position, 
-            teleport_ability_position, 
-            ultimate_ability_cooldown_position, 
-            ultimate_ability_position,
-            draw_arrow,
             arrows,
             hero,
             draw_shield,
@@ -384,7 +375,6 @@ impl PlayState {
             shield_start_time,
             hero_switch,
             bat,
-            hero_knife_bat_collision,
             hero_arrow_bat_collision,
             draw_hero,
             draw_bat,
@@ -392,10 +382,10 @@ impl PlayState {
             draw_hp_meter_bat,
             draw_hp_meter_dinosaur,
             bat_inside_range,
-            hero_arrow_dist_rect,
-            hero_knife_dist_rect,
+            // hero_arrow_dist_rect,
+            // hero_knife_dist_rect,
             use_knife_bat: use_knife,
-            arrow_rect,
+            // arrow_rect,
             arrow_overlap_bat,
             ultimate_increase_health,
             dinosaur_hero_overlaps,
@@ -415,6 +405,10 @@ impl PlayState {
             hero_inside_net,
             hero_arrow_spider_collision,
             draw_hp_meter_spider,
+            shield_img,
+            teleport_img,
+            ultimate_img,
+            ability_icon,
         })
     }
 }
@@ -634,6 +628,22 @@ impl EventHandler <ggez::GameError> for PlayState {
                 graphics::draw(ctx, &arrow_mess, DrawParam::default()).unwrap();
             }
         }
+
+        //shield icon
+        let shield = graphics::Rect::new(520.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
+        let shield_draw_param = DrawParam::default().dest([shield.x, shield.y]).scale([self.ability_icon.size.0 / self.shield_img.width() as f32, self.ability_icon.size.1 / self.shield_img.height() as f32]);
+        graphics::draw(ctx, &self.shield_img, shield_draw_param).unwrap();
+
+        //teleport icon
+        let teleport = graphics::Rect::new(920.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
+        let teleport_draw_param = DrawParam::default().dest([teleport.x, teleport.y]).scale([self.ability_icon.size.0 / self.teleport_img.width() as f32, self.ability_icon.size.1 / self.teleport_img.height() as f32]);
+        graphics::draw(ctx, &self.teleport_img, teleport_draw_param).unwrap();
+
+        //ultimate icon
+        let ultimate = graphics::Rect::new(1420.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
+        let ultimate_draw_param = DrawParam::default().dest([ultimate.x, ultimate.y]).scale([self.ability_icon.size.0 / self.ultimate_img.width() as f32, self.ability_icon.size.1 / self.ultimate_img.height() as f32]);
+        graphics::draw(ctx, &self.ultimate_img, ultimate_draw_param).unwrap();
+
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
         if self.draw_bat  {
