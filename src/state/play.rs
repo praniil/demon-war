@@ -105,6 +105,18 @@ struct Bat {
 
 struct AbilitiesIcon {
     size: (f32, f32),
+    start_instant: Instant,
+    charged: bool,
+}
+
+impl AbilitiesIcon {
+    fn start_timer(mut self) {
+        self.start_instant = Instant::now(); 
+        let ability_recharge_duration = time::Duration::from_secs(5);
+        if self.start_instant.elapsed() >= ability_recharge_duration {
+            self.charged = true;
+        }
+    }
 }
 
 impl Bat {
@@ -221,7 +233,7 @@ pub struct PlayState {
     // hero_arrow_dist_rect: Rect,
     // hero_knife_dist_rect: Rect,
     // arrow_rect: Rect,
-    ability_icon: AbilitiesIcon,
+    // ability_icon: AbilitiesIcon,
     dino_rect: Rect,
     bat_character: Rect,
     hero_character_arrows: Image,
@@ -265,6 +277,9 @@ pub struct PlayState {
     last_draw_time_spider: Instant,
     hero_arrow_spider_collision: bool,
     draw_hp_meter_spider: bool,
+    shield_ability: AbilitiesIcon,
+    teleport_ability: AbilitiesIcon,
+    ultimate_ability: AbilitiesIcon,
 }
 
 fn get_random_position() -> (f32, f32){
@@ -286,8 +301,28 @@ impl PlayState {
         let ultimate_img = load_image(ctx, "/home/pranil/rustProjects/demon_war/resources/heal_ulti.png");
         let last_draw_time_spider = Instant::now();
 
-        let ability_icon = AbilitiesIcon {
+        // let ability_icon = AbilitiesIcon {
+        //     size: (70.0, 70.0),
+        //     charged: false,
+        //     start_instant: Instant::now(),
+        // };
+
+        let shield_ability = AbilitiesIcon {
             size: (70.0, 70.0),
+            charged: false,
+            start_instant: Instant::now(),
+        };
+
+        let teleport_ability = AbilitiesIcon {
+            size: (70.0, 70.0),
+            charged: false,
+            start_instant: Instant::now(),
+        };
+
+        let ultimate_ability = AbilitiesIcon {
+            size: (70.0, 70.0),
+            charged: false,
+            start_instant: Instant::now(),
         };
 
         let dinosaur = Dinosaur {
@@ -408,7 +443,10 @@ impl PlayState {
             shield_img,
             teleport_img,
             ultimate_img,
-            ability_icon,
+            // ability_icon,
+            shield_ability,
+            teleport_ability,
+            ultimate_ability,
         })
     }
 }
@@ -630,18 +668,18 @@ impl EventHandler <ggez::GameError> for PlayState {
         }
 
         //shield icon
-        let shield = graphics::Rect::new(520.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
-        let shield_draw_param = DrawParam::default().dest([shield.x, shield.y]).scale([self.ability_icon.size.0 / self.shield_img.width() as f32, self.ability_icon.size.1 / self.shield_img.height() as f32]);
+        let shield = graphics::Rect::new(520.0, 980.0, self.shield_ability.size.0, self.shield_ability.size.1);
+        let shield_draw_param = DrawParam::default().dest([shield.x, shield.y]).scale([self.shield_ability.size.0 / self.shield_img.width() as f32, self.shield_ability.size.1 / self.shield_img.height() as f32]);
         graphics::draw(ctx, &self.shield_img, shield_draw_param).unwrap();
 
         //teleport icon
-        let teleport = graphics::Rect::new(920.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
-        let teleport_draw_param = DrawParam::default().dest([teleport.x, teleport.y]).scale([self.ability_icon.size.0 / self.teleport_img.width() as f32, self.ability_icon.size.1 / self.teleport_img.height() as f32]);
+        let teleport = graphics::Rect::new(920.0, 980.0, self.teleport_ability.size.0, self.teleport_ability.size.1);
+        let teleport_draw_param = DrawParam::default().dest([teleport.x, teleport.y]).scale([self.teleport_ability.size.0 / self.teleport_img.width() as f32, self.teleport_ability.size.1 / self.teleport_img.height() as f32]);
         graphics::draw(ctx, &self.teleport_img, teleport_draw_param).unwrap();
 
         //ultimate icon
-        let ultimate = graphics::Rect::new(1420.0, 980.0, self.ability_icon.size.0, self.ability_icon.size.1);
-        let ultimate_draw_param = DrawParam::default().dest([ultimate.x, ultimate.y]).scale([self.ability_icon.size.0 / self.ultimate_img.width() as f32, self.ability_icon.size.1 / self.ultimate_img.height() as f32]);
+        let ultimate = graphics::Rect::new(1420.0, 980.0, self.ultimate_ability.size.0, self.ultimate_ability.size.1);
+        let ultimate_draw_param = DrawParam::default().dest([ultimate.x, ultimate.y]).scale([self.ultimate_ability.size.0 / self.ultimate_img.width() as f32, self.ultimate_ability.size.1 / self.ultimate_img.height() as f32]);
         graphics::draw(ctx, &self.ultimate_img, ultimate_draw_param).unwrap();
 
 
