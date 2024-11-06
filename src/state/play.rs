@@ -5,7 +5,7 @@ use ggez::graphics::{self, drawable_size, Color, DrawMode, DrawParam, Mesh, Rect
 use glam::Vec2;
 use core::time;
 use std::thread::current;
-use std::{thread};
+use std::{clone, thread};
 use std::time::Instant;
 use std::{fs, vec};
 use ggez::graphics::Image;
@@ -103,6 +103,7 @@ struct Bat {
     health_point: HpMeter,
 }
 
+#[derive(Clone)]
 struct AbilitiesIcon {
     size: (f32, f32),
     start_instant: Instant,
@@ -110,11 +111,21 @@ struct AbilitiesIcon {
 }
 
 impl AbilitiesIcon {
-    fn start_timer(mut self) {
-        self.start_instant = Instant::now(); 
-        let ability_recharge_duration = time::Duration::from_secs(5);
-        if self.start_instant.elapsed() >= ability_recharge_duration {
-            self.charged = true;
+    fn start_timer(&mut self) {
+        println!("charged: {}", self.charged);
+
+        if !self.charged {
+            println!("inside !self.charged");
+            let ability_recharge_duration = time::Duration::from_secs(5);
+            if self.start_instant.elapsed() >= ability_recharge_duration {
+                self.charged = true;
+                println!("Ability charged!");
+            } else {
+                println!("Still charging...");
+            }
+        } else {
+            println!("Using ability, resetting cooldown...");
+            self.start_instant = Instant::now();
         }
     }
 }
@@ -519,6 +530,8 @@ impl EventHandler <ggez::GameError> for PlayState {
             if self.hero.health_point.currrent == self.hero.health_point.max {
                 self.hero.health_point.currrent = self.hero.health_point.max - 15.0;
                 self.ultimate_increase_health = false;
+                self.ultimate_ability.charged = false;
+                // self.ultimate_ability.start_instant = Instant::now();
             }
         }
 
@@ -577,8 +590,10 @@ impl EventHandler <ggez::GameError> for PlayState {
         
         if let Some(start_time) = self.shield_start_time {
             if start_time.elapsed() > time::Duration::new(5, 0) {
+                self.shield_ability.charged = false;
                 self.draw_shield = false;
                 self.shield_start_time = None;
+                // self.shield_ability.start_instant = Instant::now();
             }
         }
 
@@ -671,16 +686,19 @@ impl EventHandler <ggez::GameError> for PlayState {
         let shield = graphics::Rect::new(520.0, 980.0, self.shield_ability.size.0, self.shield_ability.size.1);
         let shield_draw_param = DrawParam::default().dest([shield.x, shield.y]).scale([self.shield_ability.size.0 / self.shield_img.width() as f32, self.shield_ability.size.1 / self.shield_img.height() as f32]);
         graphics::draw(ctx, &self.shield_img, shield_draw_param).unwrap();
+        self.shield_ability.start_timer();
 
         //teleport icon
         let teleport = graphics::Rect::new(920.0, 980.0, self.teleport_ability.size.0, self.teleport_ability.size.1);
         let teleport_draw_param = DrawParam::default().dest([teleport.x, teleport.y]).scale([self.teleport_ability.size.0 / self.teleport_img.width() as f32, self.teleport_ability.size.1 / self.teleport_img.height() as f32]);
         graphics::draw(ctx, &self.teleport_img, teleport_draw_param).unwrap();
+        self.teleport_ability.start_timer();
 
         //ultimate icon
         let ultimate = graphics::Rect::new(1420.0, 980.0, self.ultimate_ability.size.0, self.ultimate_ability.size.1);
         let ultimate_draw_param = DrawParam::default().dest([ultimate.x, ultimate.y]).scale([self.ultimate_ability.size.0 / self.ultimate_img.width() as f32, self.ultimate_ability.size.1 / self.ultimate_img.height() as f32]);
         graphics::draw(ctx, &self.ultimate_img, ultimate_draw_param).unwrap();
+        self.ultimate_ability.start_timer();
 
 
         // let bat_character = graphics::Rect::new(self.bat.position.0, self.bat.position.1, self.bat.size.0, self.bat.size.1);
@@ -903,7 +921,9 @@ impl EventHandler <ggez::GameError> for PlayState {
             if self.teleport {
                 if button == event::MouseButton::Right {
                     self.hero.position = (x, y);
+                    self.teleport_ability.charged = false;
                     self.teleport = false;
+                    // self.teleport_ability.start_instant = Instant::now();
                 }
             }
         }
@@ -947,14 +967,20 @@ impl EventHandler <ggez::GameError> for PlayState {
             } 
             match keycode {
                     KeyCode::Q => {
-                        self.draw_shield = true;
-                        self.shield_start_time = Some(Instant::now());
+                        if self.shield_ability.charged {
+                            self.draw_shield = true;
+                            self.shield_start_time = Some(Instant::now());
+                        }
                     }
                     KeyCode::E => {
-                    self.teleport = true;
+                        if self.teleport_ability.charged {
+                            self.teleport = true;
+                        }
                     }
                     KeyCode::F => {
-                        self.ultimate_increase_health = true;
+                        if self.ultimate_ability.charged {
+                            self.ultimate_increase_health = true;
+                        }
                     }
                     KeyCode::LControl => {
                         //false for hero with arrows and vice versa
