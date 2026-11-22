@@ -1,7 +1,7 @@
 # Demon War
 
 <p align="center">
-  <img src="docs/assets-gallery.png" alt="All Demon War character, enemy, effect, and ability assets displayed on a white background" width="100%">
+  <img src="docs/assets-gallery.png" alt="All unique Demon War character, enemy, effect, and ability assets displayed on a white background" width="100%">
 </p>
 
 <p align="center">
@@ -124,13 +124,12 @@ The spider patrols overhead and releases a large falling net every four seconds.
 
 ## Resource Catalogue
 
-The gallery at the top of this README displays all ten visual assets on a white background. Their original files live in [`resources/`](resources). The game rescales source images at draw time, so source resolution and in-game size are intentionally different.
+The gallery at the top of this README displays all nine unique visual assets on a white background. Their original files live in [`resources/`](resources). The game rescales source images at draw time, so source resolution and in-game size are intentionally different.
 
 | Resource | Source resolution | Used for | Runtime status |
 | --- | ---: | --- | --- |
-| [`resources/copy_hero.png`](resources/copy_hero.png) | 389 × 412 | Hero holding the ranged weapon | Active |
 | [`resources/hero_knife.png`](resources/hero_knife.png) | 405 × 361 | Hero in knife mode | Active |
-| [`resources/hero.png`](resources/hero.png) | 960 × 640 | Alternate/original hero artwork | Present but not loaded by the current game state |
+| [`resources/hero.png`](resources/hero.png) | 960 × 640 | Hero holding the ranged weapon | Active character design |
 | [`resources/bat.png`](resources/bat.png) | 242 × 81 | Homing bat enemy | Active |
 | [`resources/dinosaur.png`](resources/dinosaur.png) | 721 × 591 | Charging dinosaur enemy | Active |
 | [`resources/spider.png`](resources/spider.png) | 84 × 96 | Patrolling spider enemy | Active |
