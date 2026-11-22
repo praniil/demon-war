@@ -1,11 +1,7 @@
 # Demon War
 
 <p align="center">
-  <img src="resources/copy_hero.png" alt="Demon War ranged hero" width="170">
-  &nbsp;&nbsp;&nbsp;
-  <img src="resources/bat.png" alt="Demon War bat" width="210">
-  &nbsp;&nbsp;&nbsp;
-  <img src="resources/dinosaur.png" alt="Demon War dinosaur" width="190">
+  <img src="docs/assets-gallery.png" alt="All Demon War character, enemy, effect, and ability assets displayed on a white background" width="100%">
 </p>
 
 <p align="center">
@@ -128,7 +124,7 @@ The spider patrols overhead and releases a large falling net every four seconds.
 
 ## Resource Catalogue
 
-All visual resources live in [`resources/`](resources). The game rescales source images at draw time, so source resolution and in-game size are intentionally different.
+The gallery at the top of this README displays all ten visual assets on a white background. Their original files live in [`resources/`](resources). The game rescales source images at draw time, so source resolution and in-game size are intentionally different.
 
 | Resource | Source resolution | Used for | Runtime status |
 | --- | ---: | --- | --- |
@@ -161,6 +157,8 @@ Dependency versions are pinned in `Cargo.lock` for reproducible builds.
 demon-war/
 ├── Cargo.toml              # Package metadata and dependencies
 ├── Cargo.lock              # Locked dependency graph
+├── docs/
+│   └── assets-gallery.png  # White-background preview of every visual asset
 ├── LICENSE                 # MIT license
 ├── README.md               # Project documentation
 ├── resources/              # Character, enemy, net, and ability artwork
